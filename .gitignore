@@ -1,0 +1,28 @@
+# Local runtime output
+server*.log
+*.log
+
+# Local environment and secret material
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Dependency/build/cache output
+node_modules/
+dist/
+build/
+.cache/
+__pycache__/
+
+# Reference checkout used for API research, not part of this project
+gge-tracker/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db

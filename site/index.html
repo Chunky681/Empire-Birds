@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Empire Birds</title>
+    <script>
+      (() => {
+        try {
+          const themeFromUrl = new URLSearchParams(window.location.search).get("theme");
+          const savedTheme = localStorage.getItem("empireBirds.theme");
+          const theme = themeFromUrl === "dark" || themeFromUrl === "light"
+            ? themeFromUrl
+            : savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          if (themeFromUrl === "dark" || themeFromUrl === "light") {
+            localStorage.setItem("empireBirds.theme", theme);
+          }
+          document.documentElement.dataset.theme = theme;
+        } catch {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <div class="utility-bar" aria-label="Site controls">
+        <div class="server-dock">
+          <label for="server-select">Server</label>
+          <select id="server-select" name="server"></select>
+        </div>
+        <button type="button" id="theme-toggle" class="theme-toggle" aria-pressed="false">
+          <span class="theme-toggle__icon" aria-hidden="true"></span>
+          <span id="theme-toggle-label">Dark mode</span>
+        </button>
+      </div>
+
+      <section class="content-grid">
+        <section class="panel" aria-labelledby="players-heading">
+          <div class="roster-command-center">
+            <form class="search-panel search-panel--roster" id="alliance-form">
+              <label for="alliance-input">Alliance</label>
+              <div class="combo-row alliance-picker" id="alliance-picker">
+                <div class="combo-box">
+                  <input id="alliance-input" name="alliance" autocomplete="off" placeholder="Search alliances" aria-controls="alliance-list" aria-expanded="false">
+                  <button type="button" id="toggle-alliances" class="icon-button" aria-label="Show alliances"></button>
+                  <div class="alliance-menu" id="alliance-menu" hidden>
+                    <div class="alliance-menu__meta">
+                      <span id="alliance-menu-count">No alliances loaded</span>
+                      <span id="alliance-menu-server">US1</span>
+                    </div>
+                    <div id="alliance-list" class="alliance-list" role="listbox"></div>
+                    <div class="alliance-menu__footer" id="alliance-menu-footer">Type an exact alliance name if it is not listed.</div>
+                  </div>
+                </div>
+                <button type="submit" class="load-alliance-button">Load</button>
+              </div>
+
+              <p class="form-hint" id="form-hint">Loading top alliances...</p>
+            </form>
+
+            <section class="roster-summary" aria-live="polite">
+              <div class="summary-card">
+                <img src="../gge-tracker/gge-tracker-frontend/src/assets/alliance.png" alt="" class="summary-card__icon">
+                <div>
+                  <span class="label">Selected alliance</span>
+                  <strong id="selected-alliance">None yet</strong>
+                </div>
+              </div>
+              <div class="summary-card">
+                <img src="../gge-tracker/gge-tracker-frontend/src/assets/players.png" alt="" class="summary-card__icon">
+                <div>
+                  <span class="label">Players</span>
+                  <strong id="player-count">0</strong>
+                </div>
+              </div>
+              <div class="summary-card">
+                <img src="../gge-tracker/gge-tracker-frontend/src/assets/peace.png" alt="" class="summary-card__icon">
+                <div>
+                  <span class="label">Under bird</span>
+                  <strong id="bird-count">0</strong>
+                </div>
+              </div>
+              <div class="summary-card" title="Active members are counted by GGE Tracker as alliance players with current loot greater than 0.">
+                <img src="../gge-tracker/gge-tracker-frontend/src/assets/member-list-activity.png" alt="" class="summary-card__icon">
+                <div>
+                  <span class="label">Members active</span>
+                  <strong id="active-member-count">0</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="section-header">
+            <div>
+              <span class="label">Sortable roster</span>
+              <h2 id="players-heading">Alliance roster</h2>
+            </div>
+          </div>
+          <div class="watchtower-inline-status" hidden>
+            <p id="watchtower-status" hidden></p>
+          </div>
+          <div class="roster-tabs" role="tablist" aria-label="Roster views">
+            <button type="button" class="roster-tab is-active" data-roster-tab="roster" role="tab" aria-selected="true" aria-controls="roster-view">Roster</button>
+            <button type="button" class="roster-tab" data-roster-tab="watchtowers" role="tab" aria-selected="false" aria-controls="watchtower-view">Buildings</button>
+            <button type="button" class="roster-tab" data-roster-tab="attack-scores" role="tab" aria-selected="false" aria-controls="attack-score-view">Attack scores</button>
+          </div>
+          <div class="roster-view" id="roster-view">
+            <div class="building-filter" id="building-filter">
+              <div class="building-filter__header">
+                <div>
+                  <label for="building-input">Building filters</label>
+                  <p id="building-filter-summary">Loading building catalog...</p>
+                </div>
+              </div>
+              <div class="building-filter__controls">
+                <div class="combo-box building-picker" id="building-picker">
+                  <input id="building-input" autocomplete="off" placeholder="Search buildings to add" aria-controls="building-list" aria-expanded="false" disabled>
+                  <button type="button" id="toggle-buildings" class="icon-button" aria-label="Show buildings" disabled></button>
+                  <div class="building-menu" id="building-menu" hidden>
+                    <div id="building-list" class="building-list" role="listbox"></div>
+                  </div>
+                </div>
+                <button type="button" id="clear-building-filters" disabled>Clear filters</button>
+              </div>
+              <div class="selected-buildings" id="selected-buildings" aria-live="polite"></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+              <thead>
+                <tr>
+                  <th class="roster-evaluate-header">
+                    <div class="roster-evaluate-tools">
+                      <span class="watchtower-select-count" id="watchtower-select-count">0 / 5 selected</span>
+                      <button type="button" id="scan-watchtowers" class="eye-scan-button" disabled>
+                        <img src="assets/eye-watchtower.svg" alt="">
+                        <span>Evaluate player</span>
+                      </button>
+                    </div>
+                  </th>
+                  <th data-roster-sort-cell="player">
+                    <div class="table-heading table-heading--player">
+                      <button type="button" class="sort-button" data-roster-sort="player">
+                        <img src="../gge-tracker/gge-tracker-frontend/src/assets/icon_name.png" alt="" class="sort-icon">
+                        <span>Player</span>
+                        <span class="sort-arrow" data-sort-arrow="player" aria-hidden="true"></span>
+                      </button>
+                      <input id="player-filter" type="search" placeholder="Filter players" disabled>
+                    </div>
+                  </th>
+                  <th data-roster-sort-cell="rank">
+                    <button type="button" class="sort-button" data-roster-sort="rank">
+                      <img src="../gge-tracker/gge-tracker-frontend/src/assets/ranking.png" alt="" class="sort-icon">
+                      <span>Rank</span>
+                      <span class="sort-arrow" data-sort-arrow="rank" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th data-roster-sort-cell="lastLoot">
+                    <button type="button" class="sort-button" data-roster-sort="lastLoot">
+                      <img src="../gge-tracker/gge-tracker-frontend/src/assets/loot.png" alt="" class="sort-icon">
+                      <span>Last looted</span>
+                      <span class="sort-arrow" data-sort-arrow="lastLoot" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th data-roster-sort-cell="might">
+                    <button type="button" class="sort-button" data-roster-sort="might">
+                      <img src="../gge-tracker/gge-tracker-frontend/src/assets/might.png" alt="" class="sort-icon">
+                      <span>Might</span>
+                      <span class="sort-arrow" data-sort-arrow="might" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th data-roster-sort-cell="loot">
+                    <button type="button" class="sort-button" data-roster-sort="loot">
+                      <img src="../gge-tracker/gge-tracker-frontend/src/assets/loot4.png" alt="" class="sort-icon">
+                      <span>Loot</span>
+                      <span class="sort-arrow" data-sort-arrow="loot" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                  <th data-roster-sort-cell="timeLeft" aria-sort="ascending">
+                    <button type="button" class="sort-button is-active" data-roster-sort="timeLeft">
+                      <img src="../gge-tracker/gge-tracker-frontend/src/assets/peace.png" alt="" class="sort-icon">
+                      <span>Time left</span>
+                      <span class="time-sort-mode" data-time-sort-mode-label>Least</span>
+                      <span class="sort-arrow" data-sort-arrow="timeLeft" aria-hidden="true"></span>
+                    </button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="players-table">
+                <tr class="empty-row"><td colspan="7">No roster loaded.</td></tr>
+              </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="watchtower-view" id="watchtower-view" role="tabpanel" hidden>
+            <div class="building-level-toolbar">
+              <div class="building-level-toolbar__copy">
+                <label for="building-level-input">Building</label>
+                <span id="building-level-summary">Loading building catalog...</span>
+              </div>
+              <div class="combo-box building-level-picker" id="building-level-picker">
+                <input id="building-level-input" autocomplete="off" placeholder="Search one building" aria-controls="building-level-list" aria-expanded="false" disabled>
+                <button type="button" id="toggle-level-buildings" class="icon-button" aria-label="Show building choices" disabled></button>
+                <div class="building-level-menu" id="building-level-menu" hidden>
+                  <div class="building-level-menu__meta" id="building-level-menu-meta">No buildings loaded</div>
+                  <div id="building-level-list" class="building-list" role="listbox"></div>
+                </div>
+              </div>
+            </div>
+            <div class="watchtower-results" id="watchtower-chart">
+              <div class="watchtower-empty">
+                <img src="assets/eye-watchtower.svg" alt="">
+                <strong>No evaluations yet.</strong>
+                <span>Select up to 5 players, then evaluate them to show building levels by castle.</span>
+              </div>
+            </div>
+          </div>
+          <div class="watchtower-view" id="attack-score-view" role="tabpanel" hidden>
+            <div class="watchtower-results" id="attack-score-chart">
+              <div class="watchtower-empty">
+                <img src="assets/attack-target.svg" alt="">
+                <strong>No attack scores yet.</strong>
+                <span>Evaluate selected players to score each castle from the same castle data.</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <template id="loading-row-template">
+      <tr class="empty-row"><td colspan="7">Loading...</td></tr>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
