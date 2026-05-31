@@ -97,14 +97,13 @@
               <span class="label">Sortable roster</span>
               <h2 id="players-heading">Alliance roster</h2>
             </div>
-          </div>
-          <div class="watchtower-inline-status" hidden>
-            <p id="watchtower-status" hidden></p>
+            <div class="watchtower-inline-status" hidden>
+              <div id="watchtower-status" hidden></div>
+            </div>
           </div>
           <div class="roster-tabs" role="tablist" aria-label="Roster views">
             <button type="button" class="roster-tab is-active" data-roster-tab="roster" role="tab" aria-selected="true" aria-controls="roster-view">Roster</button>
-            <button type="button" class="roster-tab" data-roster-tab="watchtowers" role="tab" aria-selected="false" aria-controls="watchtower-view">Buildings</button>
-            <button type="button" class="roster-tab" data-roster-tab="attack-scores" role="tab" aria-selected="false" aria-controls="attack-score-view">Attack scores</button>
+            <button type="button" class="roster-tab" data-roster-tab="all" role="tab" aria-selected="false" aria-controls="all-view">All</button>
           </div>
           <div class="roster-view" id="roster-view">
             <div class="building-filter" id="building-filter">
@@ -193,35 +192,221 @@
               </table>
             </div>
           </div>
-          <div class="watchtower-view" id="watchtower-view" role="tabpanel" hidden>
-            <div class="building-level-toolbar">
-              <div class="building-level-toolbar__copy">
-                <label for="building-level-input">Building</label>
-                <span id="building-level-summary">Loading building catalog...</span>
+          <div class="watchtower-view" id="all-view" role="tabpanel" hidden>
+            <div class="building-level-toolbar all-toolbar">
+              <div class="distance-origin-toggle" role="tablist" aria-label="All view distance origin type">
+                <button type="button" class="distance-origin-toggle__button is-active" data-distance-origin-mode="castle" role="tab" aria-selected="true">Castle</button>
+                <button type="button" class="distance-origin-toggle__button" data-distance-origin-mode="coordinates" role="tab" aria-selected="false">Coordinates</button>
               </div>
-              <div class="combo-box building-level-picker" id="building-level-picker">
-                <input id="building-level-input" autocomplete="off" placeholder="Search one building" aria-controls="building-level-list" aria-expanded="false" disabled>
-                <button type="button" id="toggle-level-buildings" class="icon-button" aria-label="Show building choices" disabled></button>
-                <div class="building-level-menu" id="building-level-menu" hidden>
-                  <div class="building-level-menu__meta" id="building-level-menu-meta">No buildings loaded</div>
-                  <div id="building-level-list" class="building-list" role="listbox"></div>
+              <div class="distance-origin-panel" data-all-distance-origin-panel="castle">
+                <div class="distance-field distance-field--player">
+                  <label for="all-home-player-input">Player</label>
+                  <div class="distance-player-row">
+                    <input id="all-home-player-input" autocomplete="off" placeholder="Type exact player">
+                    <button type="button" id="all-load-home-castles">Load</button>
+                  </div>
+                </div>
+                <div class="distance-field distance-toolbar__castle">
+                  <label for="all-home-castle-select">Castle</label>
+                  <select id="all-home-castle-select" disabled>
+                    <option value="">Load castles first</option>
+                  </select>
                 </div>
               </div>
-            </div>
-            <div class="watchtower-results" id="watchtower-chart">
-              <div class="watchtower-empty">
-                <img src="assets/eye-watchtower.svg" alt="">
-                <strong>No evaluations yet.</strong>
-                <span>Select up to 5 players, then evaluate them to show building levels by castle.</span>
+              <div class="distance-origin-panel distance-origin-panel--coordinates" data-all-distance-origin-panel="coordinates" hidden>
+                <div class="distance-field distance-toolbar__castle">
+                  <label for="all-distance-region-select">Region</label>
+                  <select id="all-distance-region-select">
+                    <option value="0">Green</option>
+                    <option value="1">Burning Sands</option>
+                    <option value="2">Everwinter</option>
+                    <option value="3">Fire Peaks</option>
+                    <option value="4">Storm Islands</option>
+                  </select>
+                </div>
+                <div class="distance-coordinate-field">
+                  <label for="all-distance-x-input">X</label>
+                  <input id="all-distance-x-input" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+                </div>
+                <div class="distance-coordinate-field">
+                  <label for="all-distance-y-input">Y</label>
+                  <input id="all-distance-y-input" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
+                </div>
               </div>
+              <div class="building-level-toolbar__copy">
+                <label for="building-level-input">Master view</label>
+                <span id="all-summary">Combines player distance, building level, and attack score data when available.</span>
+              </div>
+              <div class="distance-field all-building-field">
+                <label for="building-level-input">Building</label>
+                <div class="combo-box building-level-picker" id="building-level-picker">
+                  <input id="building-level-input" autocomplete="off" placeholder="Search one building" aria-controls="building-level-list" aria-expanded="false" disabled>
+                  <button type="button" id="toggle-level-buildings" class="icon-button" aria-label="Show building choices" disabled></button>
+                  <div class="building-level-menu" id="building-level-menu" hidden>
+                    <div class="building-level-menu__meta" id="building-level-menu-meta">No buildings loaded</div>
+                    <div id="building-level-list" class="building-list" role="listbox"></div>
+                  </div>
+                </div>
+                <span id="building-level-summary">Loading building catalog...</span>
+              </div>
+              <div class="all-column-filter-group">
+                <fieldset class="all-region-filter" id="all-region-filter-panel">
+                  <legend>
+                    <span class="label">Regions</span>
+                    <span id="all-region-filter-summary">All regions shown</span>
+                  </legend>
+                  <div class="all-region-filter__options">
+                    <label>
+                      <input type="checkbox" value="0" data-all-region-filter checked>
+                      <span>Green</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="2" data-all-region-filter checked>
+                      <span>Everwinter</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="1" data-all-region-filter checked>
+                      <span>Burning Sands</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="3" data-all-region-filter checked>
+                      <span>Fire Peaks</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="4" data-all-region-filter checked>
+                      <span>Storm Islands</span>
+                    </label>
+                  </div>
+                </fieldset>
+                <fieldset class="all-region-filter all-castle-kind-filter" id="all-castle-kind-filter-panel">
+                  <legend>
+                    <span class="label">Castle groups</span>
+                    <span id="all-castle-kind-filter-summary">All groups shown</span>
+                  </legend>
+                  <div class="all-region-filter__options">
+                    <label>
+                      <input type="checkbox" value="main" data-all-castle-kind-filter checked>
+                      <span>Main Castles</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="outpost" data-all-castle-kind-filter checked>
+                      <span>Outposts</span>
+                    </label>
+                    <label>
+                      <input type="checkbox" value="property" data-all-castle-kind-filter checked>
+                      <span>Property</span>
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
+              <div class="range-rule" data-all-range-rule="distance">
+                <div class="range-rule__top">
+                  <span>Player distance</span>
+                  <label class="range-rule__switch">
+                    <input type="checkbox" data-all-range-enabled aria-label="Enable player distance range filter">
+                    <span data-all-range-state>Off</span>
+                  </label>
+                </div>
+                <div class="range-rule__track" aria-label="Player distance range">
+                  <input class="range-rule__slider" type="range" min="0" max="2010" step="10" value="0" data-all-range-slider data-all-range-bound="min" aria-label="Minimum player distance">
+                  <input class="range-rule__slider" type="range" min="0" max="2010" step="10" value="2010" data-all-range-slider data-all-range-bound="max" aria-label="Maximum player distance">
+                </div>
+                <div class="range-rule__inputs">
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="min" aria-label="Minimum player distance value">
+                  <span>to</span>
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="max" aria-label="Maximum player distance value">
+                </div>
+              </div>
+              <div class="range-rule" data-all-range-rule="attack">
+                <div class="range-rule__top">
+                  <span>Attack score</span>
+                  <label class="range-rule__switch">
+                    <input type="checkbox" data-all-range-enabled aria-label="Enable attack score range filter">
+                    <span data-all-range-state>Off</span>
+                  </label>
+                </div>
+                <div class="range-rule__track" aria-label="Attack score range">
+                  <input class="range-rule__slider" type="range" min="0" max="100" step="1" value="0" data-all-range-slider data-all-range-bound="min" aria-label="Minimum attack score">
+                  <input class="range-rule__slider" type="range" min="0" max="100" step="1" value="100" data-all-range-slider data-all-range-bound="max" aria-label="Maximum attack score">
+                </div>
+                <div class="range-rule__inputs">
+                  <input type="text" inputmode="numeric" data-all-range-input data-all-range-bound="min" aria-label="Minimum attack score value">
+                  <span>to</span>
+                  <input type="text" inputmode="numeric" data-all-range-input data-all-range-bound="max" aria-label="Maximum attack score value">
+                </div>
+              </div>
+              <div class="range-rule" data-all-range-rule="building">
+                <div class="range-rule__top">
+                  <span>Building level</span>
+                  <label class="range-rule__switch">
+                    <input type="checkbox" data-all-range-enabled aria-label="Enable building level range filter">
+                    <span data-all-range-state>Off</span>
+                  </label>
+                </div>
+                <div class="range-rule__track" aria-label="Building level range">
+                  <input class="range-rule__slider" type="range" min="0" max="30" step="1" value="0" data-all-range-slider data-all-range-bound="min" aria-label="Minimum building level">
+                  <input class="range-rule__slider" type="range" min="0" max="30" step="1" value="30" data-all-range-slider data-all-range-bound="max" aria-label="Maximum building level">
+                </div>
+                <div class="range-rule__inputs">
+                  <input type="text" inputmode="numeric" data-all-range-input data-all-range-bound="min" aria-label="Minimum building level value">
+                  <span>to</span>
+                  <input type="text" inputmode="numeric" data-all-range-input data-all-range-bound="max" aria-label="Maximum building level value">
+                </div>
+              </div>
+              <div class="range-rule" data-all-range-rule="might">
+                <div class="range-rule__top">
+                  <span>Might points</span>
+                  <label class="range-rule__switch">
+                    <input type="checkbox" data-all-range-enabled aria-label="Enable might points range filter">
+                    <span data-all-range-state>Off</span>
+                  </label>
+                </div>
+                <div class="range-rule__track" aria-label="Might points range">
+                  <input class="range-rule__slider" type="range" min="0" max="101" step="1" value="0" data-all-range-slider data-all-range-bound="min" aria-label="Minimum might points in millions">
+                  <input class="range-rule__slider" type="range" min="0" max="101" step="1" value="101" data-all-range-slider data-all-range-bound="max" aria-label="Maximum might points in millions">
+                </div>
+                <div class="range-rule__inputs">
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="min" aria-label="Minimum might points value in millions">
+                  <span>to</span>
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="max" aria-label="Maximum might points value in millions">
+                </div>
+              </div>
+              <div class="range-rule" data-all-range-rule="loot">
+                <div class="range-rule__top">
+                  <span>Last time looted</span>
+                  <label class="range-rule__switch">
+                    <input type="checkbox" data-all-range-enabled aria-label="Enable last time looted range filter">
+                    <span data-all-range-state>Off</span>
+                  </label>
+                </div>
+                <div class="range-rule__track" aria-label="Last time looted range">
+                  <input class="range-rule__slider" type="range" min="0" max="54" step="1" value="0" data-all-range-slider data-all-range-bound="min" aria-label="Minimum last time looted">
+                  <input class="range-rule__slider" type="range" min="0" max="54" step="1" value="54" data-all-range-slider data-all-range-bound="max" aria-label="Maximum last time looted">
+                </div>
+                <div class="range-rule__inputs">
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="min" aria-label="Minimum last time looted value">
+                  <span>to</span>
+                  <input type="text" inputmode="decimal" data-all-range-input data-all-range-bound="max" aria-label="Maximum last time looted value">
+                </div>
+              </div>
+              <label class="distance-filter-toggle" for="all-filter-not-cheating" title="Show cards for players without the bot-like loot streak signal.">
+                <input id="all-filter-not-cheating" type="checkbox">
+                <span>Players not cheating</span>
+              </label>
+              <label class="distance-filter-toggle" for="all-filter-not-birded" title="Show cards for players who are not currently under protection.">
+                <input id="all-filter-not-birded" type="checkbox">
+                <span>Players not birded</span>
+              </label>
+              <label class="distance-filter-toggle" for="all-filter-scanned" title="Show cards for players that have scan data available.">
+                <input id="all-filter-scanned" type="checkbox">
+                <span>Players scanned</span>
+              </label>
             </div>
-          </div>
-          <div class="watchtower-view" id="attack-score-view" role="tabpanel" hidden>
-            <div class="watchtower-results" id="attack-score-chart">
+            <div class="watchtower-results" id="all-chart">
               <div class="watchtower-empty">
                 <img src="assets/attack-target.svg" alt="">
-                <strong>No attack scores yet.</strong>
-                <span>Evaluate selected players to score each castle from the same castle data.</span>
+                <strong>No master view yet.</strong>
+                <span>Load an alliance or evaluate players to combine distances, building levels, and attack scores.</span>
               </div>
             </div>
           </div>
