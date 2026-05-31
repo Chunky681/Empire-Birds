@@ -4,9 +4,141 @@ const MAX_VISIBLE_ALLIANCES = 80;
 const MAX_VISIBLE_BUILDINGS = 80;
 const THEME_STORAGE_KEY = "empireBirds.theme";
 const WATCHTOWER_SESSION_CACHE_KEY = "empireBirds.watchtowerResultsByAlliance";
+const ALL_REGION_FILTER_STORAGE_KEY = "empireBirds.allRegionFilter";
+const ALL_CASTLE_KIND_FILTER_STORAGE_KEY = "empireBirds.allCastleKindFilter";
+const ALL_DISTANCE_RANGE_FILTER_STORAGE_KEY = "empireBirds.allDistanceRangeFilter";
+const ALL_ATTACK_SCORE_FILTER_STORAGE_KEY = "empireBirds.allAttackScoreFilter";
+const ALL_BUILDING_LEVEL_FILTER_STORAGE_KEY = "empireBirds.allBuildingLevelFilter";
+const ALL_MIGHT_RANGE_FILTER_STORAGE_KEY = "empireBirds.allMightRangeFilter";
+const ALL_LOOT_AGE_RANGE_FILTER_STORAGE_KEY = "empireBirds.allLootAgeRangeFilter";
+const DISTANCE_SESSION_CACHE_KEY = "empireBirds.distanceRowsByAlliance";
+const HOME_PLAYER_STORAGE_KEY = "empireBirds.homePlayerName";
+const HOME_CASTLE_STORAGE_KEY = "empireBirds.homeCastleKey";
+const HOME_PLAYER_HISTORY_STORAGE_KEY = "empireBirds.homePlayerHistory";
+const DISTANCE_ORIGIN_MODE_STORAGE_KEY = "empireBirds.distanceOriginMode";
+const DISTANCE_COORDINATES_STORAGE_KEY = "empireBirds.distanceCoordinates";
+const DISTANCE_HIGHLIGHT_STORAGE_KEY = "empireBirds.distanceHighlightThreshold";
+const DISTANCE_HIGHLIGHT_MIGHT_STORAGE_KEY = "empireBirds.distanceHighlightMightMillions";
+const DISTANCE_HIGHLIGHT_LOOT_DAYS_STORAGE_KEY = "empireBirds.distanceHighlightLootDays";
+const DISTANCE_HIGHLIGHT_NOT_CHEATING_STORAGE_KEY = "empireBirds.distanceHighlightNotCheating";
+const DISTANCE_HIGHLIGHT_NOT_BIRDED_STORAGE_KEY = "empireBirds.distanceHighlightNotBirded";
+const ALL_HIGHLIGHT_SCANNED_STORAGE_KEY = "empireBirds.allHighlightScanned";
+const DISTANCE_SLIDER_MAX = 2000;
+const DISTANCE_SLIDER_INFINITY_VALUE = DISTANCE_SLIDER_MAX + 10;
+const MIGHT_SLIDER_STEPS = 100;
+const MIGHT_SLIDER_MIN_MILLIONS = 0.1;
+const MIGHT_SLIDER_MAX_MILLIONS = 500;
+const MIGHT_SLIDER_INFINITY_STEP = MIGHT_SLIDER_STEPS + 1;
+const LOOT_AGE_SLIDER_HOUR_STEPS = 24;
+const LOOT_AGE_SLIDER_MAX = 53;
+const LOOT_AGE_SLIDER_INFINITY_VALUE = LOOT_AGE_SLIDER_MAX + 1;
+const RANGE_FILTER_THUMB_RADIUS_PX = 10;
+const RANGE_FILTER_THUMB_SIZE_PX = RANGE_FILTER_THUMB_RADIUS_PX * 2;
+const ALL_PLAYER_COLUMN_MIN_WIDTH = 330;
+const ALL_CASTLE_COLUMN_MIN_WIDTH = 330;
+const ALL_RANGE_FILTER_DEFS = {
+  distance: {
+    storageKey: ALL_DISTANCE_RANGE_FILTER_STORAGE_KEY,
+    legacyStorageKey: DISTANCE_HIGHLIGHT_STORAGE_KEY,
+    legacyMode: "max",
+    minValue: 0,
+    maxValue: Number.POSITIVE_INFINITY,
+    finiteMaxValue: DISTANCE_SLIDER_MAX,
+    allowInfinityMax: true,
+    defaultMin: 0,
+    defaultMax: Number.POSITIVE_INFINITY,
+    sliderMin: 0,
+    sliderMax: DISTANCE_SLIDER_INFINITY_VALUE,
+    sliderStep: 10,
+    label: "player distance",
+    format: formatDistanceRuleValue,
+    formatInput: formatDistanceInputValue,
+    parse: parseDistanceRangeInput,
+    sliderToValue: getDistanceFromRangeSlider,
+    valueToSlider: getDistanceSliderValue,
+  },
+  attack: {
+    storageKey: ALL_ATTACK_SCORE_FILTER_STORAGE_KEY,
+    legacyStorageKey: ALL_ATTACK_SCORE_FILTER_STORAGE_KEY,
+    legacyMode: "max",
+    minValue: 0,
+    maxValue: 100,
+    defaultMin: 0,
+    defaultMax: 100,
+    sliderMin: 0,
+    sliderMax: 100,
+    sliderStep: 1,
+    label: "attack score",
+    format: formatAttackScoreRuleValue,
+    formatInput: (value) => String(Math.trunc(Number(value || 0))),
+    parse: parsePlainRangeInput,
+    sliderToValue: getAttackScoreFromSlider,
+    valueToSlider: getAttackScoreSliderValue,
+  },
+  building: {
+    storageKey: ALL_BUILDING_LEVEL_FILTER_STORAGE_KEY,
+    legacyStorageKey: ALL_BUILDING_LEVEL_FILTER_STORAGE_KEY,
+    legacyMode: "min",
+    minValue: 0,
+    maxValue: 30,
+    defaultMin: 0,
+    defaultMax: 30,
+    sliderMin: 0,
+    sliderMax: 30,
+    sliderStep: 1,
+    label: "building level",
+    format: formatBuildingLevelRuleValue,
+    formatInput: (value) => String(Math.trunc(Number(value || 0))),
+    parse: parsePlainRangeInput,
+    sliderToValue: getBuildingLevelFromSlider,
+    valueToSlider: getBuildingLevelSliderValue,
+  },
+  might: {
+    storageKey: ALL_MIGHT_RANGE_FILTER_STORAGE_KEY,
+    legacyStorageKey: DISTANCE_HIGHLIGHT_MIGHT_STORAGE_KEY,
+    legacyMode: "min",
+    minValue: 0,
+    maxValue: Number.POSITIVE_INFINITY,
+    finiteMaxValue: MIGHT_SLIDER_MAX_MILLIONS,
+    allowInfinityMax: true,
+    defaultMin: 0,
+    defaultMax: Number.POSITIVE_INFINITY,
+    sliderMin: 0,
+    sliderMax: MIGHT_SLIDER_INFINITY_STEP,
+    sliderStep: 1,
+    label: "might points",
+    format: formatMightRuleValue,
+    formatInput: formatMightRuleValue,
+    parse: parseMightRangeInput,
+    sliderToValue: getMightMillionsFromSlider,
+    valueToSlider: getMightSliderValue,
+  },
+  loot: {
+    storageKey: ALL_LOOT_AGE_RANGE_FILTER_STORAGE_KEY,
+    legacyStorageKey: DISTANCE_HIGHLIGHT_LOOT_DAYS_STORAGE_KEY,
+    legacyMode: "min",
+    minValue: 0,
+    maxValue: Number.POSITIVE_INFINITY,
+    finiteMaxValue: 30,
+    allowInfinityMax: true,
+    defaultMin: 0,
+    defaultMax: Number.POSITIVE_INFINITY,
+    sliderMin: 0,
+    sliderMax: LOOT_AGE_SLIDER_INFINITY_VALUE,
+    sliderStep: 1,
+    label: "last time looted",
+    format: formatLootAgeRuleValue,
+    formatInput: (value) => formatLootAgeRuleValue(value).toUpperCase(),
+    parse: parseLootAgeRangeInput,
+    sliderToValue: getLootDaysFromSlider,
+    valueToSlider: getLootDaysSliderValue,
+  },
+};
 const BOT_LOOT_STREAK_HOURS = 15;
 const LOOT_STREAK_MIN_INTERVAL_HOURS = 0.75;
 const LOOT_STREAK_MAX_INTERVAL_HOURS = 1.5;
+const CONSTRUCTION_ITEM_DEFENSE_WEIGHT = 16;
+const CONSTRUCTION_ITEM_SCORE_SPEED = 0.4;
 const BUILDING_GROUPS_TO_SCAN = new Set(["Building", "Tower", "Gate", "Defence", "Moat", "FixedPositionBuilding"]);
 const DEFENSIVE_PUBLIC_ORDER_EFFECTS = new Map([
   ["370", { label: "Strength in courtyard when defending", type: "yardPercent", cap: 130 }],
@@ -53,17 +185,115 @@ const NON_DEFENSIVE_CONSTRUCTION_ITEM_KEYWORDS = [
   "resource",
   "loot",
   "quarry",
+  "defensive tools",
+  "defensivetools",
+  "tool",
+  "tools",
+  "toolcost",
+  "tooltime",
+  "toolspeed",
+  "toolsmith",
 ];
+const DIRECT_DEFENSIVE_CONSTRUCTION_EFFECT_TYPES = new Set([
+  "defensebonus",
+  "defenseboostyard",
+  "defenseboostfront",
+  "defenseboostflank",
+  "defenseunitamountwall",
+  "defenseunitamountwallpvp",
+  "defenseunitamountyardbonus",
+  "defenseunitamountyardboost",
+  "defensesupportunits",
+  "gatebonus",
+  "moatbonus",
+  "unitwallabsoluteamount",
+  "wallamount",
+  "wallbonus",
+]);
+const DIRECT_DEFENSIVE_CONSTRUCTION_EFFECT_ID_TYPES = new Map([
+  ["370", "defenseboostyard"],
+  ["371", "defenseunitamountyardbonus"],
+  ["387", "defenseunitamountwall"],
+  ["420", "unitwallabsoluteamount"],
+  ["421", "defenseboostfront"],
+  ["422", "defenseboostflank"],
+  ["501", "defenseboostyard"],
+  ["507", "defensesupportunits"],
+  ["508", "defensesupportunits"],
+  ["509", "defenseboostfront"],
+  ["510", "defenseboostflank"],
+  ["618", "defenseunitamountwall"],
+  ["619", "defensebonus"],
+  ["620", "defenseboostyard"],
+  ["702", "defenseunitamountyardbonus"],
+  ["703", "defenseunitamountyardboost"],
+  ["705", "defenseunitamountyardboost"],
+]);
+const DIRECT_DEFENSIVE_CONSTRUCTION_STAT_KEYS = new Set([
+  "unitWallCount",
+]);
+const CONSTRUCTION_ITEM_EFFECT_SCORE_CAPS = new Map([
+  ["defensebonus", 100],
+  ["defenseboostyard", 60],
+  ["defenseboostfront", 60],
+  ["defenseboostflank", 60],
+  ["defenseunitamountwall", 160],
+  ["defenseunitamountwallpvp", 160],
+  ["defenseunitamountyardbonus", 10000],
+  ["defenseunitamountyardboost", 20],
+  ["defensesupportunits", 100],
+  ["gatebonus", 80],
+  ["moatbonus", 80],
+  ["unitwallabsoluteamount", 250],
+  ["wallamount", 250],
+  ["wallbonus", 80],
+]);
+const CONSTRUCTION_ITEM_STAT_SCORE_CAPS = new Map([
+  ["unitWallCount", 250],
+]);
 const CASTLE_TYPE_LABELS = new Map([
   [1, "Main castle"],
   [3, "Capital"],
   [4, "Outpost"],
   [12, "Realm castle"],
-  [22, "Trade city"],
+  [22, "Metropolis"],
   [23, "Royal tower"],
   [26, "Monument"],
   [28, "Laboratory"],
 ]);
+const DISTANCE_TARGET_CASTLE_TYPES = new Set([1, 3, 4, 12, 22]);
+const CASTLE_TYPE_COLUMN_LABELS = new Map([
+  [1, "Main castle"],
+  [3, "Capitals"],
+  [4, "Outposts"],
+  [12, "Realm castles"],
+  [22, "Metropolises"],
+  [23, "Royal towers"],
+  [26, "Monuments"],
+  [28, "Laboratories"],
+]);
+const CASTLE_TYPE_COLUMN_ORDER = new Map([
+  [1, 0],
+  [4, 10],
+  [12, 20],
+  [22, 30],
+  [3, 40],
+  [23, 50],
+  [26, 60],
+  [28, 70],
+]);
+const ALL_KINGDOM_FILTER_OPTIONS = [
+  { id: 0, label: "Green" },
+  { id: 2, label: "Everwinter" },
+  { id: 1, label: "Burning Sands" },
+  { id: 3, label: "Fire Peaks" },
+  { id: 4, label: "Storm Islands" },
+];
+const ALL_CASTLE_KIND_FILTER_OPTIONS = [
+  { id: "main", label: "Main Castles" },
+  { id: "outpost", label: "Outposts" },
+  { id: "property", label: "Property" },
+];
 
 const SERVERS = [
   "US1",
@@ -115,6 +345,8 @@ const state = {
   filteredLevelBuildingCatalog: [],
   buildingItemByWod: new Map(),
   constructionItemById: new Map(),
+  effectById: new Map(),
+  effectTypeById: new Map(),
   selectedBuildingKeys: new Set(JSON.parse(localStorage.getItem("empireBirds.buildingFilters") || "[]")),
   selectedLevelBuildingKey: localStorage.getItem("empireBirds.levelBuildingKey") || "",
   activeBuildingIndex: -1,
@@ -140,7 +372,34 @@ const state = {
   watchtowerResultsByAlliance: loadWatchtowerSessionCache(),
   watchtowerScanActive: false,
   watchtowerScanId: 0,
+  watchtowerScanProgress: null,
   activeAttackScoreCastleKey: "",
+  selectedAllRegionIds: loadAllRegionFilterSelection(),
+  selectedAllCastleKindIds: loadAllCastleKindFilterSelection(),
+  allRangeFilters: loadAllRangeFilters(),
+  distanceRows: [],
+  distanceRowsByAlliance: loadDistanceSessionCache(),
+  distanceLoading: false,
+  distanceLoadError: "",
+  distanceLoadId: 0,
+  homePlayerName: localStorage.getItem(HOME_PLAYER_STORAGE_KEY) || "",
+  homePlayerHistory: loadHomePlayerHistory(),
+  filteredHomePlayerChoices: [],
+  activeHomePlayerIndex: -1,
+  homePlayerMenuOpen: false,
+  homeCastles: [],
+  homeCastleLoading: false,
+  selectedHomeCastleKey: localStorage.getItem(HOME_CASTLE_STORAGE_KEY) || "",
+  distanceOriginMode: localStorage.getItem(DISTANCE_ORIGIN_MODE_STORAGE_KEY) === "coordinates" ? "coordinates" : "castle",
+  distanceCoordinates: loadDistanceCoordinates(),
+  distanceHighlightThreshold: loadDistanceHighlightNumber(DISTANCE_HIGHLIGHT_STORAGE_KEY, "max"),
+  distanceHighlightMightMillions: loadDistanceHighlightNumber(DISTANCE_HIGHLIGHT_MIGHT_STORAGE_KEY, "min"),
+  distanceHighlightLootDays: loadDistanceHighlightNumber(DISTANCE_HIGHLIGHT_LOOT_DAYS_STORAGE_KEY, "min"),
+  distanceHighlightNotCheating: localStorage.getItem(DISTANCE_HIGHLIGHT_NOT_CHEATING_STORAGE_KEY) === "true",
+  distanceHighlightNotBirded: localStorage.getItem(DISTANCE_HIGHLIGHT_NOT_BIRDED_STORAGE_KEY) === "true",
+  allHighlightScanned: localStorage.getItem(ALL_HIGHLIGHT_SCANNED_STORAGE_KEY) === "true",
+  allPlayerSearchQuery: "",
+  allSort: null,
   activeRosterTab: "roster",
   rosterSort: {
     key: "timeLeft",
@@ -190,6 +449,43 @@ const elements = {
   rosterView: document.querySelector("#roster-view"),
   attackScoreChart: document.querySelector("#attack-score-chart"),
   attackScoreView: document.querySelector("#attack-score-view"),
+  distanceChart: document.querySelector("#distance-chart"),
+  distanceView: document.querySelector("#distance-view"),
+  allChart: document.querySelector("#all-chart"),
+  allView: document.querySelector("#all-view"),
+  allSummary: document.querySelector("#all-summary"),
+  allBuildingSelect: document.querySelector("#all-building-select"),
+  allHomePlayerInput: document.querySelector("#all-home-player-input"),
+  allLoadHomeCastles: document.querySelector("#all-load-home-castles"),
+  allHomeCastleSelect: document.querySelector("#all-home-castle-select"),
+  allDistanceRegionSelect: document.querySelector("#all-distance-region-select"),
+  allDistanceXInput: document.querySelector("#all-distance-x-input"),
+  allDistanceYInput: document.querySelector("#all-distance-y-input"),
+  allHighlightNotCheating: document.querySelector("#all-filter-not-cheating"),
+  allHighlightNotBirded: document.querySelector("#all-filter-not-birded"),
+  allHighlightScanned: document.querySelector("#all-filter-scanned"),
+  allRegionFilterPanel: document.querySelector("#all-region-filter-panel"),
+  allRegionFilterSummary: document.querySelector("#all-region-filter-summary"),
+  allCastleKindFilterSummary: document.querySelector("#all-castle-kind-filter-summary"),
+  homePlayerPicker: document.querySelector("#home-player-picker"),
+  homePlayerInput: document.querySelector("#home-player-input"),
+  toggleHomePlayers: document.querySelector("#toggle-home-players"),
+  homePlayerMenu: document.querySelector("#home-player-menu"),
+  homePlayerList: document.querySelector("#home-player-list"),
+  loadHomeCastles: document.querySelector("#load-home-castles"),
+  homeCastleSelect: document.querySelector("#home-castle-select"),
+  distanceRegionSelect: document.querySelector("#distance-region-select"),
+  distanceXInput: document.querySelector("#distance-x-input"),
+  distanceYInput: document.querySelector("#distance-y-input"),
+  distanceHighlightInput: document.querySelector("#distance-highlight-input"),
+  distanceHighlightValue: document.querySelector("#distance-highlight-value"),
+  distanceMightInput: document.querySelector("#distance-might-input"),
+  distanceMightValue: document.querySelector("#distance-might-value"),
+  distanceLootDaysInput: document.querySelector("#distance-loot-days-input"),
+  distanceLootDaysValue: document.querySelector("#distance-loot-days-value"),
+  distanceHighlightNotCheating: document.querySelector("#distance-filter-not-cheating"),
+  distanceHighlightNotBirded: document.querySelector("#distance-filter-not-birded"),
+  homeDistanceSummary: document.querySelector("#home-distance-summary"),
   watchtowerView: document.querySelector("#watchtower-view"),
 };
 
@@ -279,6 +575,7 @@ function bindEvents() {
 
   elements.serverSelect.addEventListener("change", () => {
     cacheCurrentWatchtowerResults();
+    cacheCurrentDistanceRows();
     state.server = elements.serverSelect.value;
     state.currentAlliance = null;
     state.players = [];
@@ -295,6 +592,13 @@ function bindEvents() {
     state.lootActivityByPlayerKey = new Map();
     state.lootActivityLoading = false;
     state.lootActivityRequestId += 1;
+    state.homeCastles = [];
+    state.selectedHomeCastleKey = "";
+    state.distanceRows = [];
+    state.distanceLoading = false;
+    state.distanceLoadError = "";
+    state.distanceLoadId += 1;
+    localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
     resetWatchtowerScanState();
     closeAllianceMenu();
     closeBuildingMenu();
@@ -354,6 +658,217 @@ function bindEvents() {
 
   elements.scanWatchtowers.addEventListener("click", () => {
     void scanSelectedWatchtowers();
+  });
+
+  document.querySelectorAll("[data-distance-origin-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setDistanceOriginMode(button.dataset.distanceOriginMode);
+    });
+  });
+
+  elements.homePlayerInput?.addEventListener("input", () => {
+    const nextName = elements.homePlayerInput.value.trim();
+    if (nextName === state.homePlayerName) return;
+    state.homePlayerName = nextName;
+    state.homeCastles = [];
+    state.selectedHomeCastleKey = "";
+    localStorage.setItem(HOME_PLAYER_STORAGE_KEY, state.homePlayerName);
+    localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
+    state.activeHomePlayerIndex = -1;
+    renderHomePlayerMenu();
+    openHomePlayerMenu();
+    renderDistanceChart();
+    renderAllChart();
+  });
+
+  elements.homePlayerInput?.addEventListener("focus", () => {
+    openHomePlayerMenu();
+  });
+
+  elements.homePlayerInput?.addEventListener("keydown", (event) => {
+    handleHomePlayerInputKeydown(event);
+  });
+
+  elements.toggleHomePlayers?.addEventListener("click", () => {
+    if (state.homePlayerMenuOpen) {
+      closeHomePlayerMenu();
+    } else {
+      openHomePlayerMenu();
+    }
+  });
+
+  elements.loadHomeCastles?.addEventListener("click", () => {
+    void loadHomeCastles();
+  });
+
+  elements.homeCastleSelect?.addEventListener("change", () => {
+    state.selectedHomeCastleKey = elements.homeCastleSelect.value;
+    if (state.selectedHomeCastleKey) {
+      localStorage.setItem(HOME_CASTLE_STORAGE_KEY, state.selectedHomeCastleKey);
+    } else {
+      localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
+    }
+    renderDistanceChart();
+    renderAllChart();
+  });
+
+  elements.distanceRegionSelect?.addEventListener("change", () => {
+    state.distanceCoordinates.kingdomId = Number(elements.distanceRegionSelect.value || 0);
+    persistDistanceCoordinates();
+    renderDistanceChart();
+    renderAllChart();
+  });
+
+  [elements.distanceXInput, elements.distanceYInput].forEach((input) => {
+    input?.addEventListener("input", () => {
+      state.distanceCoordinates.positionX = parseCoordinate(elements.distanceXInput?.value);
+      state.distanceCoordinates.positionY = parseCoordinate(elements.distanceYInput?.value);
+      persistDistanceCoordinates();
+      renderDistanceChart();
+      renderAllChart();
+    });
+  });
+
+  elements.distanceHighlightInput?.addEventListener("input", () => {
+    setDistanceHighlightNumber("distanceHighlightThreshold", DISTANCE_HIGHLIGHT_STORAGE_KEY, getDistanceThresholdFromSlider(elements.distanceHighlightInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceHighlightInput?.addEventListener("change", () => {
+    setDistanceHighlightNumber("distanceHighlightThreshold", DISTANCE_HIGHLIGHT_STORAGE_KEY, getDistanceThresholdFromSlider(elements.distanceHighlightInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceMightInput?.addEventListener("input", () => {
+    setDistanceHighlightNumber("distanceHighlightMightMillions", DISTANCE_HIGHLIGHT_MIGHT_STORAGE_KEY, getMightMillionsFromSlider(elements.distanceMightInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceMightInput?.addEventListener("change", () => {
+    setDistanceHighlightNumber("distanceHighlightMightMillions", DISTANCE_HIGHLIGHT_MIGHT_STORAGE_KEY, getMightMillionsFromSlider(elements.distanceMightInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceLootDaysInput?.addEventListener("input", () => {
+    setDistanceHighlightNumber("distanceHighlightLootDays", DISTANCE_HIGHLIGHT_LOOT_DAYS_STORAGE_KEY, getLootDaysFromSlider(elements.distanceLootDaysInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceLootDaysInput?.addEventListener("change", () => {
+    setDistanceHighlightNumber("distanceHighlightLootDays", DISTANCE_HIGHLIGHT_LOOT_DAYS_STORAGE_KEY, getLootDaysFromSlider(elements.distanceLootDaysInput.value));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceHighlightNotCheating?.addEventListener("change", () => {
+    state.distanceHighlightNotCheating = elements.distanceHighlightNotCheating.checked;
+    localStorage.setItem(DISTANCE_HIGHLIGHT_NOT_CHEATING_STORAGE_KEY, String(state.distanceHighlightNotCheating));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.distanceHighlightNotBirded?.addEventListener("change", () => {
+    state.distanceHighlightNotBirded = elements.distanceHighlightNotBirded.checked;
+    localStorage.setItem(DISTANCE_HIGHLIGHT_NOT_BIRDED_STORAGE_KEY, String(state.distanceHighlightNotBirded));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.allHomePlayerInput?.addEventListener("input", () => {
+    const nextName = elements.allHomePlayerInput.value.trim();
+    if (nextName === state.homePlayerName) return;
+    state.homePlayerName = nextName;
+    if (state.homePlayerName) {
+      localStorage.setItem(HOME_PLAYER_STORAGE_KEY, state.homePlayerName);
+    } else {
+      localStorage.removeItem(HOME_PLAYER_STORAGE_KEY);
+    }
+    if (elements.allLoadHomeCastles) {
+      elements.allLoadHomeCastles.disabled = state.homeCastleLoading || !state.homePlayerName;
+    }
+  });
+
+  elements.allLoadHomeCastles?.addEventListener("click", () => {
+    state.homePlayerName = (elements.allHomePlayerInput?.value || state.homePlayerName || "").trim();
+    if (state.homePlayerName) localStorage.setItem(HOME_PLAYER_STORAGE_KEY, state.homePlayerName);
+    void loadHomeCastles();
+  });
+
+  elements.allHomeCastleSelect?.addEventListener("change", () => {
+    state.selectedHomeCastleKey = elements.allHomeCastleSelect.value;
+    if (state.selectedHomeCastleKey) {
+      localStorage.setItem(HOME_CASTLE_STORAGE_KEY, state.selectedHomeCastleKey);
+    } else {
+      localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
+    }
+    renderDistanceChart();
+    renderAllChart();
+  });
+
+  elements.allDistanceRegionSelect?.addEventListener("change", () => {
+    state.distanceCoordinates.kingdomId = Number(elements.allDistanceRegionSelect.value || 0);
+    persistDistanceCoordinates();
+    renderDistanceChart();
+    renderAllChart();
+  });
+
+  [elements.allDistanceXInput, elements.allDistanceYInput].forEach((input) => {
+    input?.addEventListener("input", () => {
+      state.distanceCoordinates.positionX = parseCoordinate(elements.allDistanceXInput?.value);
+      state.distanceCoordinates.positionY = parseCoordinate(elements.allDistanceYInput?.value);
+      persistDistanceCoordinates();
+      renderDistanceChart();
+      renderAllChart();
+    });
+  });
+
+  elements.allBuildingSelect?.addEventListener("change", () => {
+    setSelectedLevelBuildingKey(elements.allBuildingSelect.value);
+  });
+
+  bindAllRangeFilterControls();
+
+  elements.allHighlightNotCheating?.addEventListener("change", () => {
+    state.distanceHighlightNotCheating = elements.allHighlightNotCheating.checked;
+    localStorage.setItem(DISTANCE_HIGHLIGHT_NOT_CHEATING_STORAGE_KEY, String(state.distanceHighlightNotCheating));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.allHighlightNotBirded?.addEventListener("change", () => {
+    state.distanceHighlightNotBirded = elements.allHighlightNotBirded.checked;
+    localStorage.setItem(DISTANCE_HIGHLIGHT_NOT_BIRDED_STORAGE_KEY, String(state.distanceHighlightNotBirded));
+    refreshDistanceHighlightFilters();
+  });
+
+  elements.allHighlightScanned?.addEventListener("change", () => {
+    state.allHighlightScanned = elements.allHighlightScanned.checked;
+    localStorage.setItem(ALL_HIGHLIGHT_SCANNED_STORAGE_KEY, String(state.allHighlightScanned));
+    refreshAllFilters();
+  });
+
+  document.querySelectorAll("[data-all-region-filter]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const kingdomId = Number(input.value);
+      if (!Number.isFinite(kingdomId)) return;
+      if (input.checked) {
+        state.selectedAllRegionIds.add(kingdomId);
+      } else {
+        state.selectedAllRegionIds.delete(kingdomId);
+      }
+      persistAllRegionFilterSelection();
+      renderAllChart();
+    });
+  });
+
+  document.querySelectorAll("[data-all-castle-kind-filter]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const kindId = String(input.value || "");
+      if (!ALL_CASTLE_KIND_FILTER_OPTIONS.some((option) => option.id === kindId)) return;
+      if (input.checked) {
+        state.selectedAllCastleKindIds.add(kindId);
+      } else {
+        state.selectedAllCastleKindIds.delete(kindId);
+      }
+      persistAllCastleKindFilterSelection();
+      renderAllChart();
+    });
   });
 
   elements.toggleLevelBuildings?.addEventListener("click", () => {
@@ -418,8 +933,73 @@ function bindEvents() {
     if (!document.querySelector("#building-level-picker")?.contains(event.target)) {
       closeLevelBuildingMenu();
     }
+    if (!elements.homePlayerPicker?.contains(event.target)) {
+      closeHomePlayerMenu();
+    }
   });
 
+}
+
+function bindAllRangeFilterControls() {
+  document.querySelectorAll("[data-all-range-rule]").forEach((ruleEl) => {
+    const id = String(ruleEl.dataset.allRangeRule || "");
+    if (!getAllRangeFilterDef(id)) return;
+
+    ruleEl.querySelector("[data-all-range-enabled]")?.addEventListener("change", (event) => {
+      setAllRangeFilter(id, { enabled: event.currentTarget.checked });
+    });
+
+    ruleEl.querySelectorAll("[data-all-range-slider]").forEach((slider) => {
+      slider.addEventListener("input", () => {
+        handleAllRangeSliderInput(id, slider);
+      });
+    });
+
+    ruleEl.querySelectorAll("[data-all-range-input]").forEach((input) => {
+      input.addEventListener("change", () => {
+        commitAllRangeTextInput(id, input);
+      });
+      input.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        commitAllRangeTextInput(id, input);
+        input.blur();
+      });
+    });
+  });
+}
+
+function handleAllRangeSliderInput(id, slider) {
+  const def = getAllRangeFilterDef(id);
+  if (!def) return;
+  const bound = slider.dataset.allRangeBound === "max" ? "max" : "min";
+  const value = def.sliderToValue(slider.value, bound);
+  if (!isValidAllRangeValue(value)) return;
+  const current = getAllRangeFilter(id);
+  const updates = { enabled: true, [bound]: value };
+  if (bound === "min" && current && value > current.max) updates.max = value;
+  if (bound === "max" && current && value < current.min) updates.min = value;
+  setAllRangeFilter(id, updates);
+}
+
+function commitAllRangeTextInput(id, input) {
+  const def = getAllRangeFilterDef(id);
+  if (!def) return;
+  const bound = input.dataset.allRangeBound === "max" ? "max" : "min";
+  const value = def.parse(input.value);
+  if (!isValidAllRangeValue(value)) {
+    syncAllRangeFilterControl(id);
+    const current = getAllRangeFilter(id);
+    if (current) input.value = def.formatInput(current[bound]);
+    return;
+  }
+  const current = getAllRangeFilter(id);
+  const updates = { enabled: true, [bound]: value };
+  if (bound === "min" && current && value > current.max) updates.max = value;
+  if (bound === "max" && current && value < current.min) updates.min = value;
+  setAllRangeFilter(id, updates);
+  const next = getAllRangeFilter(id);
+  if (next) input.value = def.formatInput(next[bound]);
 }
 
 async function loadAllianceChoices() {
@@ -452,8 +1032,12 @@ async function loadBuildingCatalog() {
     const items = await apiFetch("assets/items");
     const buildings = Array.isArray(items.buildings) ? items.buildings : [];
     const constructionItems = Array.isArray(items.constructionItems) ? items.constructionItems : [];
+    const effects = Array.isArray(items.effects) ? items.effects : [];
+    const effectTypes = Array.isArray(items.effecttypes) ? items.effecttypes : [];
     state.buildingItemByWod = new Map(buildings.map((building) => [Number(building.wodID), building]));
     state.constructionItemById = new Map(constructionItems.map((item) => [Number(item.constructionItemID), item]));
+    state.effectById = new Map(effects.map((effect) => [String(effect.effectID), effect]));
+    state.effectTypeById = new Map(effectTypes.map((effectType) => [String(effectType.effectTypeID), effectType]));
     state.buildingCatalog = buildBuildingCatalog(buildings);
     state.selectedBuildingKeys = new Set(
       [...state.selectedBuildingKeys].filter((key) => state.buildingCatalog.some((building) => building.key === key)),
@@ -465,9 +1049,11 @@ async function loadBuildingCatalog() {
     renderBuildingMenu();
     renderBuildingFilters();
     renderWatchtowerChart();
+    renderAllChart();
   } catch (error) {
     elements.buildingFilterSummary.textContent = "Building catalog could not be loaded.";
     renderBuildingLevelSelect();
+    renderAllChart();
     showToast(error.message || "Could not load building catalog.");
   }
 }
@@ -662,6 +1248,564 @@ function persistBuildingFilters() {
   localStorage.setItem("empireBirds.buildingFilters", JSON.stringify([...state.selectedBuildingKeys]));
 }
 
+function setDistanceOriginMode(mode) {
+  const normalizedMode = mode === "coordinates" ? "coordinates" : "castle";
+  if (state.distanceOriginMode === normalizedMode) return;
+  state.distanceOriginMode = normalizedMode;
+  localStorage.setItem(DISTANCE_ORIGIN_MODE_STORAGE_KEY, normalizedMode);
+  closeHomePlayerMenu();
+  renderDistanceChart();
+  renderAllChart();
+}
+
+function renderHomePlayerMenu() {
+  if (!elements.homePlayerList || !elements.homePlayerInput) return;
+  const choices = getHomePlayerChoices();
+  state.filteredHomePlayerChoices = choices;
+
+  if (choices.length === 0) {
+    elements.homePlayerList.innerHTML = `<div class="alliance-empty">Type an exact player name.</div>`;
+    return;
+  }
+
+  elements.homePlayerList.innerHTML = choices.map((choice, index) => {
+    const active = index === state.activeHomePlayerIndex ? " is-active" : "";
+    return `
+      <button type="button" class="building-option building-option--text${active}" role="option" data-home-player-index="${index}" aria-selected="${index === state.activeHomePlayerIndex}">
+        <span>
+          <span class="building-option__name">${escapeHtml(choice.playerName)}</span>
+          <span class="building-option__meta">${escapeHtml(choice.meta)}</span>
+        </span>
+      </button>
+    `;
+  }).join("");
+
+  elements.homePlayerList.querySelectorAll("[data-home-player-index]").forEach((option) => {
+    option.addEventListener("click", () => {
+      selectHomePlayerChoice(Number(option.dataset.homePlayerIndex));
+    });
+  });
+}
+
+function getHomePlayerChoices() {
+  const query = (elements.homePlayerInput?.value || state.homePlayerName || "").trim();
+  const normalizedQuery = query.toLowerCase();
+  const choices = [];
+  const seen = new Set();
+
+  const addChoice = (playerName, meta, source) => {
+    const name = String(playerName || "").trim();
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) return;
+    if (normalizedQuery && !key.includes(normalizedQuery)) return;
+    seen.add(key);
+    choices.push({ playerName: name, meta, source });
+  };
+
+  state.players.forEach((player) => {
+    addChoice(player.player_name, state.currentAlliance?.alliance_name || "Current roster", "roster");
+  });
+  state.homePlayerHistory.forEach((playerName) => {
+    addChoice(playerName, "Saved player", "history");
+  });
+
+  if (query && !seen.has(normalizedQuery)) {
+    choices.unshift({
+      playerName: query,
+      meta: `Exact lookup on ${state.server}`,
+      source: "exact",
+    });
+  }
+
+  return choices.slice(0, MAX_VISIBLE_ALLIANCES);
+}
+
+function openHomePlayerMenu() {
+  if (!elements.homePlayerMenu || !elements.homePlayerInput) return;
+  renderHomePlayerMenu();
+  state.homePlayerMenuOpen = true;
+  elements.homePlayerMenu.hidden = false;
+  elements.homePlayerInput.setAttribute("aria-expanded", "true");
+}
+
+function closeHomePlayerMenu() {
+  if (!elements.homePlayerMenu || !elements.homePlayerInput) return;
+  state.homePlayerMenuOpen = false;
+  elements.homePlayerMenu.hidden = true;
+  elements.homePlayerInput.setAttribute("aria-expanded", "false");
+}
+
+function selectHomePlayerChoice(index) {
+  const choice = state.filteredHomePlayerChoices[index];
+  if (!choice) return;
+
+  const previousName = state.homePlayerName;
+  state.activeHomePlayerIndex = index;
+  state.homePlayerName = choice.playerName;
+  if (elements.homePlayerInput) elements.homePlayerInput.value = choice.playerName;
+  localStorage.setItem(HOME_PLAYER_STORAGE_KEY, state.homePlayerName);
+
+  if (previousName !== choice.playerName) {
+    state.homeCastles = [];
+    state.selectedHomeCastleKey = "";
+    localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
+  }
+
+  closeHomePlayerMenu();
+  renderDistanceChart();
+  renderAllChart();
+}
+
+function handleHomePlayerInputKeydown(event) {
+  if (!state.homePlayerMenuOpen && ["ArrowDown", "ArrowUp"].includes(event.key)) {
+    openHomePlayerMenu();
+    event.preventDefault();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    closeHomePlayerMenu();
+    return;
+  }
+
+  if (event.key === "Enter") {
+    if (state.homePlayerMenuOpen && state.filteredHomePlayerChoices.length > 0 && state.activeHomePlayerIndex >= 0) {
+      selectHomePlayerChoice(state.activeHomePlayerIndex);
+    }
+    event.preventDefault();
+    void loadHomeCastles();
+    return;
+  }
+
+  if (!state.homePlayerMenuOpen || state.filteredHomePlayerChoices.length === 0) return;
+
+  if (event.key === "ArrowDown") {
+    state.activeHomePlayerIndex = Math.min(state.activeHomePlayerIndex + 1, state.filteredHomePlayerChoices.length - 1);
+    renderHomePlayerMenu();
+    event.preventDefault();
+  }
+
+  if (event.key === "ArrowUp") {
+    state.activeHomePlayerIndex = Math.max(state.activeHomePlayerIndex - 1, 0);
+    renderHomePlayerMenu();
+    event.preventDefault();
+  }
+}
+
+function loadHomePlayerHistory() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(HOME_PLAYER_HISTORY_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed.map((name) => String(name || "").trim()).filter(Boolean).slice(0, 12) : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadDistanceCoordinates() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(DISTANCE_COORDINATES_STORAGE_KEY) || "{}");
+    return {
+      kingdomId: Number(parsed.kingdomId || 0),
+      positionX: parseCoordinate(parsed.positionX),
+      positionY: parseCoordinate(parsed.positionY),
+    };
+  } catch {
+    return { kingdomId: 0, positionX: null, positionY: null };
+  }
+}
+
+function loadDistanceHighlightNumber(storageKey, legacyMode = "max") {
+  return loadFilterNumber(storageKey, legacyMode);
+}
+
+function loadAllRegionFilterSelection() {
+  const allIds = ALL_KINGDOM_FILTER_OPTIONS.map((option) => option.id);
+  const raw = localStorage.getItem(ALL_REGION_FILTER_STORAGE_KEY);
+  if (raw === null) return new Set(allIds);
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set(allIds);
+    const validIds = new Set(allIds);
+    return new Set(parsed.map(Number).filter((id) => validIds.has(id)));
+  } catch {
+    return new Set(allIds);
+  }
+}
+
+function persistAllRegionFilterSelection() {
+  localStorage.setItem(ALL_REGION_FILTER_STORAGE_KEY, JSON.stringify([...getSelectedAllRegionIds()]));
+}
+
+function getSelectedAllRegionIds() {
+  if (!(state.selectedAllRegionIds instanceof Set)) {
+    state.selectedAllRegionIds = loadAllRegionFilterSelection();
+  }
+  return state.selectedAllRegionIds;
+}
+
+function loadAllCastleKindFilterSelection() {
+  const allIds = ALL_CASTLE_KIND_FILTER_OPTIONS.map((option) => option.id);
+  const raw = localStorage.getItem(ALL_CASTLE_KIND_FILTER_STORAGE_KEY);
+  if (raw === null) return new Set(allIds);
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return new Set(allIds);
+    const validIds = new Set(allIds);
+    return new Set(parsed.map(String).filter((id) => validIds.has(id)));
+  } catch {
+    return new Set(allIds);
+  }
+}
+
+function persistAllCastleKindFilterSelection() {
+  localStorage.setItem(ALL_CASTLE_KIND_FILTER_STORAGE_KEY, JSON.stringify([...getSelectedAllCastleKindIds()]));
+}
+
+function getSelectedAllCastleKindIds() {
+  if (!(state.selectedAllCastleKindIds instanceof Set)) {
+    state.selectedAllCastleKindIds = loadAllCastleKindFilterSelection();
+  }
+  return state.selectedAllCastleKindIds;
+}
+
+function getAllRangeFilterDef(id) {
+  const def = ALL_RANGE_FILTER_DEFS[id];
+  if (!def) return null;
+  if (id !== "building") return def;
+  const maxLevel = getSelectedBuildingRangeMax();
+  return {
+    ...def,
+    maxValue: maxLevel,
+    defaultMax: maxLevel,
+    sliderMax: maxLevel,
+    finiteMaxValue: maxLevel,
+  };
+}
+
+function getSelectedBuildingRangeMax() {
+  let selectedBuilding = null;
+  try {
+    selectedBuilding = getSelectedLevelBuilding();
+  } catch {
+    return 30;
+  }
+  const levels = Array.isArray(selectedBuilding?.levels) ? selectedBuilding.levels.map(Number).filter(Number.isFinite) : [];
+  const maxLevel = Math.max(0, Number(selectedBuilding?.maxLevel || 0), ...levels);
+  return Number.isFinite(maxLevel) && maxLevel > 0 ? Math.trunc(maxLevel) : 30;
+}
+
+function getFiniteAllRangeMax(def) {
+  const finiteMax = Number(def?.finiteMaxValue);
+  if (Number.isFinite(finiteMax)) return finiteMax;
+  const max = Number(def?.maxValue);
+  return Number.isFinite(max) ? max : 0;
+}
+
+function isValidAllRangeValue(value) {
+  if (value === null || value === undefined || value === "") return false;
+  const number = Number(value);
+  return Number.isFinite(number) || number === Number.POSITIVE_INFINITY;
+}
+
+function clampAllRangeValue(value, min, max) {
+  const number = Number(value);
+  if (number === Number.POSITIVE_INFINITY && max === Number.POSITIVE_INFINITY) return number;
+  if (number === Number.POSITIVE_INFINITY) return max;
+  if (!Number.isFinite(number)) return min;
+  return Math.min(max, Math.max(min, number));
+}
+
+function serializeAllRangeNumber(value) {
+  return Number(value) === Number.POSITIVE_INFINITY ? "Infinity" : value;
+}
+
+function loadAllRangeFilters() {
+  return Object.fromEntries(Object.keys(ALL_RANGE_FILTER_DEFS).map((id) => {
+    return [id, loadAllRangeFilter(id)];
+  }));
+}
+
+function loadAllRangeFilter(id) {
+  const def = getAllRangeFilterDef(id);
+  if (!def) return null;
+  const raw = localStorage.getItem(def.storageKey);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && ("enabled" in parsed || "min" in parsed || "max" in parsed)) {
+        const hasRangeValue = isValidAllRangeValue(parseAllRangeNumber(parsed.min)) || isValidAllRangeValue(parseAllRangeNumber(parsed.max));
+        return normalizeAllRangeFilter(id, {
+          enabled: "enabled" in parsed ? Boolean(parsed.enabled) : hasRangeValue,
+          min: parsed.min,
+          max: parsed.max,
+        });
+      }
+      const legacy = getLegacyFilterNumber(parsed, def.legacyMode);
+      if (Number.isFinite(legacy)) return migrateLegacyAllRangeFilter(id, legacy);
+    } catch {
+      const legacy = parsePositiveFilterNumber(raw);
+      if (Number.isFinite(legacy)) return migrateLegacyAllRangeFilter(id, legacy);
+    }
+  }
+  const legacyRaw = def.legacyStorageKey && def.legacyStorageKey !== def.storageKey
+    ? localStorage.getItem(def.legacyStorageKey)
+    : null;
+  if (legacyRaw) {
+    const legacy = loadFilterNumber(def.legacyStorageKey, def.legacyMode);
+    if (Number.isFinite(legacy)) return migrateLegacyAllRangeFilter(id, legacy);
+  }
+  return normalizeAllRangeFilter(id, {
+    enabled: false,
+    min: def.defaultMin,
+    max: def.defaultMax,
+  });
+}
+
+function migrateLegacyAllRangeFilter(id, legacyValue) {
+  const def = getAllRangeFilterDef(id);
+  if (!def) return null;
+  const min = def.legacyMode === "min" ? legacyValue : def.minValue;
+  const max = def.legacyMode === "min" ? def.maxValue : legacyValue;
+  return normalizeAllRangeFilter(id, { enabled: true, min, max });
+}
+
+function normalizeAllRangeFilter(id, value) {
+  const def = getAllRangeFilterDef(id);
+  if (!def) return null;
+  const parsedMin = parseAllRangeNumber(value?.min);
+  const parsedMax = parseAllRangeNumber(value?.max);
+  let min = Number.isFinite(parsedMin) ? parsedMin : def.defaultMin;
+  let max = isValidAllRangeValue(parsedMax) ? parsedMax : def.defaultMax;
+  min = clampAllRangeValue(min, def.minValue, getFiniteAllRangeMax(def));
+  max = clampAllRangeValue(max, def.minValue, def.allowInfinityMax ? Number.POSITIVE_INFINITY : getFiniteAllRangeMax(def));
+  if (min > max) [min, max] = [max, min];
+  return {
+    enabled: Boolean(value?.enabled),
+    min,
+    max,
+  };
+}
+
+function persistAllRangeFilter(id) {
+  const def = getAllRangeFilterDef(id);
+  const range = state.allRangeFilters?.[id];
+  if (!def || !range) return;
+  localStorage.setItem(def.storageKey, JSON.stringify({
+    enabled: Boolean(range.enabled),
+    min: serializeAllRangeNumber(range.min),
+    max: serializeAllRangeNumber(range.max),
+  }));
+}
+
+function getAllRangeFilter(id) {
+  if (!state.allRangeFilters || typeof state.allRangeFilters !== "object") {
+    state.allRangeFilters = loadAllRangeFilters();
+  }
+  if (!state.allRangeFilters[id]) {
+    state.allRangeFilters[id] = loadAllRangeFilter(id);
+  }
+  state.allRangeFilters[id] = normalizeAllRangeFilter(id, state.allRangeFilters[id]);
+  return state.allRangeFilters[id];
+}
+
+function getActiveAllRangeFilter(id) {
+  const range = getAllRangeFilter(id);
+  return range?.enabled ? range : null;
+}
+
+function setAllRangeFilter(id, updates = {}, { refresh = true } = {}) {
+  const current = getAllRangeFilter(id);
+  if (!current) return;
+  state.allRangeFilters[id] = normalizeAllRangeFilter(id, { ...current, ...updates });
+  persistAllRangeFilter(id);
+  syncAllRangeFilterControl(id);
+  if (refresh) refreshAllFilters();
+}
+
+function loadFilterNumber(storageKey, legacyMode = "max") {
+  const raw = localStorage.getItem(storageKey);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return getLegacyFilterNumber(parsed, legacyMode);
+  } catch {
+    return parsePositiveFilterNumber(raw);
+  }
+}
+
+function getLegacyFilterNumber(value, legacyMode = "max") {
+  if (value && typeof value === "object") {
+    const preferred = parsePositiveFilterNumber(value[legacyMode === "min" ? "min" : "max"]);
+    const fallback = parsePositiveFilterNumber(value[legacyMode === "min" ? "max" : "min"]);
+    return Number.isFinite(preferred) ? preferred : fallback;
+  }
+  return parsePositiveFilterNumber(value);
+}
+
+function setDistanceHighlightNumber(stateKey, storageKey, value) {
+  state[stateKey] = parsePositiveFilterNumber(value);
+  if (state[stateKey] === null) {
+    localStorage.removeItem(storageKey);
+  } else {
+    localStorage.setItem(storageKey, String(state[stateKey]));
+  }
+  syncDistanceHighlightSliders();
+}
+
+function parsePositiveFilterNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function parseAllRangeNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (isInfinityInput(value)) return Number.POSITIVE_INFINITY;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function parseDistanceRangeInput(value) {
+  const cleaned = String(value || "").replaceAll(",", "").trim();
+  if (isInfinityInput(cleaned)) return Number.POSITIVE_INFINITY;
+  const number = extractFirstNumber(cleaned);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function parsePlainRangeInput(value) {
+  const cleaned = String(value || "").replaceAll(",", "").replace(/[^\d.-]/g, "").trim();
+  if (isZeroInput(value)) return 0;
+  if (isInfinityInput(value)) return Number.POSITIVE_INFINITY;
+  const parsed = extractFirstNumber(cleaned);
+  if (!Number.isFinite(parsed)) return null;
+  const number = Math.trunc(parsed);
+  return Number.isFinite(number) ? number : null;
+}
+
+function parseMightRangeInput(value) {
+  const cleaned = String(value || "").replaceAll(",", "").trim().toLowerCase();
+  if (isInfinityInput(cleaned)) return Number.POSITIVE_INFINITY;
+  const number = extractFirstNumber(cleaned);
+  if (!Number.isFinite(number)) return null;
+  if (cleaned.includes("b")) return number * 1000;
+  if (number > 100000) return number / 1000000;
+  return number;
+}
+
+function parseLootAgeRangeInput(value) {
+  const cleaned = String(value || "").replaceAll(",", "").trim().toLowerCase();
+  if (isInfinityInput(cleaned)) return Number.POSITIVE_INFINITY;
+  const number = extractFirstNumber(cleaned);
+  if (!Number.isFinite(number)) return null;
+  if (cleaned.includes("h")) return number / 24;
+  return number;
+}
+
+function isInfinityInput(value) {
+  const cleaned = String(value || "").trim().toLowerCase();
+  return cleaned === "inf" || cleaned === "infinite" || cleaned === "infinity";
+}
+
+function isZeroInput(value) {
+  const cleaned = String(value || "").trim().toLowerCase();
+  return cleaned === "none" || cleaned === "off" || cleaned === "zero";
+}
+
+function extractFirstNumber(value) {
+  const match = String(value || "").match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
+function getDistanceFromRangeSlider(value, bound = "max") {
+  const sliderValue = Math.trunc(Number(value || 0));
+  if (!Number.isFinite(sliderValue) || sliderValue <= 0) return 0;
+  if (bound === "max" && sliderValue >= DISTANCE_SLIDER_INFINITY_VALUE) return Number.POSITIVE_INFINITY;
+  return clampNumber(sliderValue, 0, DISTANCE_SLIDER_MAX);
+}
+
+function getDistanceThresholdFromSlider(value) {
+  const sliderValue = Math.trunc(Number(value || 0));
+  if (!Number.isFinite(sliderValue) || sliderValue <= 0) return null;
+  return clampNumber(sliderValue, 0, DISTANCE_SLIDER_MAX);
+}
+
+function getDistanceSliderValue(value) {
+  if (Number(value) === Number.POSITIVE_INFINITY) return DISTANCE_SLIDER_INFINITY_VALUE;
+  if (!Number.isFinite(Number(value))) return 0;
+  return clampNumber(Math.round(Number(value) / 10) * 10, 0, DISTANCE_SLIDER_MAX);
+}
+
+function getAttackScoreFromSlider(value) {
+  const score = Math.trunc(Number(value || 0));
+  return Number.isFinite(score) ? clampNumber(score, 0, 100) : null;
+}
+
+function getAttackScoreSliderValue(value) {
+  const score = Number(value);
+  return Number.isFinite(score) ? clampNumber(Math.trunc(score), 0, 100) : 0;
+}
+
+function getBuildingLevelFromSlider(value) {
+  const level = Math.trunc(Number(value || 0));
+  return Number.isFinite(level) ? clampNumber(level, 0, getSelectedBuildingRangeMax()) : null;
+}
+
+function getBuildingLevelSliderValue(value) {
+  const level = Number(value);
+  return Number.isFinite(level) ? clampNumber(Math.trunc(level), 0, getSelectedBuildingRangeMax()) : 0;
+}
+
+function getMightMillionsFromSlider(value, bound = "max") {
+  const sliderValue = Math.trunc(Number(value || 0));
+  if (!Number.isFinite(sliderValue) || sliderValue <= 0) return 0;
+  if (bound === "max" && sliderValue >= MIGHT_SLIDER_INFINITY_STEP) return Number.POSITIVE_INFINITY;
+  const progress = (clampNumber(sliderValue, 1, MIGHT_SLIDER_STEPS) - 1) / Math.max(1, MIGHT_SLIDER_STEPS - 1);
+  const ratio = MIGHT_SLIDER_MAX_MILLIONS / MIGHT_SLIDER_MIN_MILLIONS;
+  const millions = MIGHT_SLIDER_MIN_MILLIONS * Math.pow(ratio, progress);
+  return Math.round(millions * 10) / 10;
+}
+
+function getMightSliderValue(value) {
+  const millions = Number(value);
+  if (millions === Number.POSITIVE_INFINITY) return MIGHT_SLIDER_INFINITY_STEP;
+  if (!Number.isFinite(millions) || millions <= 0) return 0;
+  const ratio = MIGHT_SLIDER_MAX_MILLIONS / MIGHT_SLIDER_MIN_MILLIONS;
+  const progress = Math.log(clampNumber(millions, MIGHT_SLIDER_MIN_MILLIONS, MIGHT_SLIDER_MAX_MILLIONS) / MIGHT_SLIDER_MIN_MILLIONS) / Math.log(ratio);
+  return clampNumber(Math.round(progress * (MIGHT_SLIDER_STEPS - 1)) + 1, 1, MIGHT_SLIDER_STEPS);
+}
+
+function getLootDaysFromSlider(value, bound = "max") {
+  const sliderValue = Math.trunc(Number(value || 0));
+  if (!Number.isFinite(sliderValue) || sliderValue <= 0) return 0;
+  if (bound === "max" && sliderValue >= LOOT_AGE_SLIDER_INFINITY_VALUE) return Number.POSITIVE_INFINITY;
+  if (sliderValue <= LOOT_AGE_SLIDER_HOUR_STEPS) {
+    return sliderValue / 24;
+  }
+  return clampNumber(sliderValue - 23, 2, 30);
+}
+
+function getLootDaysSliderValue(value) {
+  const days = Number(value);
+  if (days === Number.POSITIVE_INFINITY) return LOOT_AGE_SLIDER_INFINITY_VALUE;
+  if (!Number.isFinite(days) || days <= 0) return 0;
+  if (days <= 1) {
+    return clampNumber(Math.round(days * 24), 1, LOOT_AGE_SLIDER_HOUR_STEPS);
+  }
+  return clampNumber(Math.round(days) + 23, LOOT_AGE_SLIDER_HOUR_STEPS + 1, LOOT_AGE_SLIDER_MAX);
+}
+
+function persistDistanceCoordinates() {
+  localStorage.setItem(DISTANCE_COORDINATES_STORAGE_KEY, JSON.stringify(state.distanceCoordinates));
+}
+
+function saveHomePlayerToHistory(playerName) {
+  const name = String(playerName || "").trim();
+  if (!name) return;
+  const remaining = state.homePlayerHistory.filter((item) => item.toLowerCase() !== name.toLowerCase());
+  state.homePlayerHistory = [name, ...remaining].slice(0, 12);
+  localStorage.setItem(HOME_PLAYER_HISTORY_STORAGE_KEY, JSON.stringify(state.homePlayerHistory));
+}
+
 function syncSelectedLevelBuildingKey() {
   if (state.buildingCatalog.some((building) => building.key === state.selectedLevelBuildingKey)) return;
   const watchtower = state.buildingCatalog.find((building) => {
@@ -674,6 +1818,7 @@ function syncSelectedLevelBuildingKey() {
 }
 
 function renderBuildingLevelSelect() {
+  renderAllBuildingSelect();
   if (!elements.buildingLevelInput || !elements.buildingLevelList) return;
   if (state.buildingCatalog.length === 0) {
     elements.buildingLevelInput.disabled = true;
@@ -730,6 +1875,21 @@ function renderBuildingLevelSelect() {
   });
 }
 
+function renderAllBuildingSelect() {
+  if (!elements.allBuildingSelect) return;
+  if (state.buildingCatalog.length === 0) {
+    elements.allBuildingSelect.disabled = true;
+    elements.allBuildingSelect.innerHTML = `<option value="">Loading buildings...</option>`;
+    return;
+  }
+  syncSelectedLevelBuildingKey();
+  elements.allBuildingSelect.disabled = false;
+  elements.allBuildingSelect.innerHTML = state.buildingCatalog.map((building) => {
+    const selected = building.key === state.selectedLevelBuildingKey ? " selected" : "";
+    return `<option value="${escapeHtml(building.key)}"${selected}>${escapeHtml(building.displayName)}</option>`;
+  }).join("");
+}
+
 function getLevelBuildingOptions(query) {
   const normalizedQuery = String(query || "").trim().toLowerCase();
   if (!normalizedQuery) return state.buildingCatalog;
@@ -782,10 +1942,18 @@ function closeLevelBuildingMenu() {
 function selectLevelBuildingOption(index) {
   const building = state.filteredLevelBuildingCatalog[index];
   if (!building) return;
-  state.selectedLevelBuildingKey = building.key;
-  localStorage.setItem("empireBirds.levelBuildingKey", state.selectedLevelBuildingKey);
+  setSelectedLevelBuildingKey(building.key);
   closeLevelBuildingMenu();
+}
+
+function setSelectedLevelBuildingKey(key) {
+  const nextKey = String(key || "");
+  if (!state.buildingCatalog.some((building) => building.key === nextKey)) return;
+  state.selectedLevelBuildingKey = nextKey;
+  localStorage.setItem("empireBirds.levelBuildingKey", state.selectedLevelBuildingKey);
+  renderBuildingLevelSelect();
   renderWatchtowerChart();
+  renderAllChart();
 }
 
 function handleLevelBuildingInputKeydown(event) {
@@ -934,6 +2102,7 @@ function handleAllianceInputKeydown(event) {
 
 async function loadAlliance(value) {
   cacheCurrentWatchtowerResults();
+  cacheCurrentDistanceRows();
   closeAllianceMenu();
   setLoading(true);
   try {
@@ -963,6 +2132,7 @@ async function loadAlliance(value) {
     const lootActivityRequestId = state.lootActivityRequestId + 1;
     state.lootActivityRequestId = lootActivityRequestId;
     resetWatchtowerScanState({ restoreResults: true });
+    restoreDistanceRowsForCurrentAlliance();
 
     localStorage.setItem("empireBirds.alliance", state.currentAlliance.alliance_name);
     elements.allianceInput.value = state.currentAlliance.alliance_name;
@@ -1097,6 +2267,7 @@ async function loadRosterLootActivity(requestId) {
     if (requestId === state.lootActivityRequestId) {
       state.lootActivityLoading = false;
       renderRosterTable();
+      renderDistanceChart();
     }
   }
 }
@@ -1525,8 +2696,7 @@ function togglePublicOrderDetails(castleKey) {
   } else {
     state.openPublicOrderCastleKeys.add(castleKey);
   }
-  renderRosterTable();
-  renderAttackScoreChart();
+  renderScoreDetailViews();
 }
 
 function toggleConstructionItemDetails(castleKey) {
@@ -1536,8 +2706,17 @@ function toggleConstructionItemDetails(castleKey) {
   } else {
     state.openConstructionItemCastleKeys.add(castleKey);
   }
-  renderRosterTable();
+  renderScoreDetailViews();
+}
+
+function renderScoreDetailViews() {
+  if (state.activeRosterTab === "roster") {
+    renderRosterTable();
+  }
   renderAttackScoreChart();
+  if (state.activeRosterTab === "all") {
+    renderAllChart();
+  }
 }
 
 function renderPlayerBuildingDetailsRow(player) {
@@ -1849,7 +3028,7 @@ function countTargetConstructionItems(target) {
 }
 
 function renderDefensivePublicOrderDetails(target) {
-  const items = Array.isArray(target.publicOrderItems) ? target.publicOrderItems : [];
+  const items = getPublicOrderItemsForDisplay(target);
   if (items.length === 0) {
     return `
       <div class="public-order-details">
@@ -1886,9 +3065,10 @@ function renderDefensivePublicOrderCard(item) {
         <div>
           <strong>${escapeHtml(item.name)}</strong>
           <span>${formatNumber(item.publicOrder)} public order</span>
+          ${renderScoreContributionPill(item.scoreContribution, "to PO score")}
         </div>
         <ul>
-          ${item.effects.map((effect) => `<li><b>${escapeHtml(effect.valueLabel)}</b><span>${escapeHtml(effect.label)}</span></li>`).join("")}
+          ${(Array.isArray(item.effects) ? item.effects : []).map((effect) => `<li><b>${escapeHtml(effect.valueLabel)}</b><span>${escapeHtml(effect.label)}</span></li>`).join("")}
         </ul>
       </div>
     </article>
@@ -1896,7 +3076,7 @@ function renderDefensivePublicOrderCard(item) {
 }
 
 function renderDefensiveConstructionItemDetails(target) {
-  const rows = Array.isArray(target.constructionItemRows) ? target.constructionItemRows : [];
+  const rows = getConstructionItemRowsForDisplay(target);
   const itemCount = rows.reduce((sum, row) => {
     return sum + row.instances.reduce((instanceSum, instance) => instanceSum + (instance.constructionItems?.length || 0), 0);
   }, 0);
@@ -1977,11 +3157,47 @@ function renderConstructionItemCard(item) {
         <div>
           <strong>${escapeHtml(item.displayName)}</strong>
           <span>${escapeHtml(item.slotName)} - ${escapeHtml(item.rarityName)}</span>
+          ${renderScoreContributionPill(item.scoreContribution, "to build item score")}
         </div>
         <p>${escapeHtml(item.effectText)}</p>
       </div>
     </div>
   `;
+}
+
+function getPublicOrderItemsForDisplay(target) {
+  const items = Array.isArray(target.publicOrderItems) ? target.publicOrderItems : [];
+  if (items.length === 0 || items.every((item) => Number.isFinite(Number(item.scoreContribution)))) return items;
+  return addPublicOrderScoreContributions(items);
+}
+
+function getConstructionItemRowsForDisplay(target) {
+  const rows = Array.isArray(target.constructionItemRows) ? target.constructionItemRows : [];
+  if (rows.length === 0 || rows.every(rowHasConstructionItemContributions)) return rows;
+  return addConstructionItemScoreContributions(rows, {
+    strength: getConstructionItemDetailScore(target),
+  });
+}
+
+function rowHasConstructionItemContributions(row) {
+  const instances = Array.isArray(row.instances) ? row.instances : [];
+  return instances.every((instance) => {
+    const items = Array.isArray(instance.constructionItems) ? instance.constructionItems : [];
+    return items.every((item) => Number.isFinite(Number(item.scoreContribution)));
+  });
+}
+
+function getConstructionItemDetailScore(target) {
+  const details = Array.isArray(target?.categories?.defense?.details) ? target.categories.defense.details : [];
+  const detail = details.find((entry) => entry.action === "constructionItems");
+  const score = Number(detail?.score);
+  return Number.isFinite(score) ? score : 0;
+}
+
+function renderScoreContributionPill(value, label) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return "";
+  return `<span class="score-contribution-pill" title="${escapeHtml(label)}">${escapeHtml(formatScoreContribution(number))} ${escapeHtml(label)}</span>`;
 }
 
 function getCastleBuildingGroups(rows, evaluation) {
@@ -2250,15 +3466,49 @@ function toggleWatchtowerSelection(playerId) {
 }
 
 async function scanSelectedWatchtowers() {
-  if (state.watchtowerScanActive) return;
-  const scanCacheKey = getWatchtowerAllianceCacheKey();
   const selectedPlayers = [...state.watchtowerSelectedPlayerIds]
     .map((playerKey) => state.players.find((player) => getPlayerKey(player) === playerKey))
     .filter(Boolean)
     .slice(0, 5);
 
+  await scanWatchtowerPlayers(selectedPlayers, {
+    emptyMessage: "Select up to 5 players to evaluate.",
+    clearSelectionOnSuccess: true,
+  });
+}
+
+async function scanAllPlayer(playerId) {
+  const playerKey = String(playerId || "");
+  const row = getAllResultRows().find((item) => String(item.playerKey || "") === playerKey);
+  const player = getRosterPlayerForAllRow(row) || state.players.find((item) => getPlayerKey(item) === playerKey);
+  if (!player) {
+    showToast("That player is not in the current roster.");
+    return;
+  }
+
+  await scanWatchtowerPlayers([player], {
+    emptyMessage: "That player is not in the current roster.",
+    clearSelectionOnSuccess: false,
+    refreshAllRows: true,
+  });
+}
+
+async function scanWatchtowerPlayers(players, { emptyMessage = "Select players to evaluate.", clearSelectionOnSuccess = false, refreshAllRows = false } = {}) {
+  if (state.watchtowerScanActive) {
+    showToast("A player evaluation is already running.");
+    return;
+  }
+
+  const scanCacheKey = getWatchtowerAllianceCacheKey();
+  const selectedPlayers = (Array.isArray(players) ? players : [])
+    .filter(Boolean)
+    .slice(0, 5);
+  const selectedPlayerKeys = selectedPlayers.map(getPlayerKey);
+  const useQuietAllRefresh = refreshAllRows && state.activeRosterTab === "all";
+  let completedPlayerKeys = [];
+
   if (selectedPlayers.length === 0) {
-    showToast("Select up to 5 players to evaluate.");
+    showToast(emptyMessage);
     return;
   }
 
@@ -2270,16 +3520,37 @@ async function scanSelectedWatchtowers() {
   state.watchtowerScanActive = true;
   const scanId = state.watchtowerScanId + 1;
   state.watchtowerScanId = scanId;
+  state.watchtowerScanProgress = {
+    total: selectedPlayers.length,
+    completed: 0,
+    currentPlayerName: "",
+  };
   selectedPlayers.forEach((player) => state.watchtowerLoadingPlayerIds.add(getPlayerKey(player)));
-  setRosterTab("watchtowers");
   renderRosterTable();
-  renderScanResultViews();
-  renderWatchtowerStatus(`Evaluating ${selectedPlayers.length} selected ${selectedPlayers.length === 1 ? "player" : "players"}...`);
+  if (useQuietAllRefresh) {
+    refreshAllPlayerScanControls();
+  } else {
+    renderScanResultViews();
+  }
+  renderWatchtowerStatus();
 
   try {
     const results = await mapLimit(selectedPlayers, 2, async (player, index) => {
-      renderWatchtowerStatus(`Evaluating player ${index + 1}/${selectedPlayers.length}: ${player.player_name}`);
-      return fetchPlayerWatchtowerRow(player);
+      if (scanId === state.watchtowerScanId && state.watchtowerScanProgress) {
+        state.watchtowerScanProgress.currentPlayerName = player.player_name;
+        renderWatchtowerStatus(`Marching on ${player.player_name} (${index + 1}/${selectedPlayers.length})`);
+      }
+      try {
+        return await fetchPlayerWatchtowerRow(player);
+      } finally {
+        if (scanId === state.watchtowerScanId && state.watchtowerScanProgress) {
+          state.watchtowerScanProgress.completed = Math.min(
+            state.watchtowerScanProgress.total,
+            state.watchtowerScanProgress.completed + 1,
+          );
+          renderWatchtowerStatus();
+        }
+      }
     });
 
     const cachedResults = scanCacheKey === getWatchtowerAllianceCacheKey()
@@ -2288,6 +3559,7 @@ async function scanSelectedWatchtowers() {
     results.forEach((result) => {
       cachedResults.set(result.playerKey, result);
     });
+    completedPlayerKeys = results.map((result) => String(result.playerKey || "")).filter(Boolean);
     cacheWatchtowerResultsForAllianceKey(scanCacheKey, cachedResults);
 
     if (scanId === state.watchtowerScanId && scanCacheKey === getWatchtowerAllianceCacheKey()) {
@@ -2295,23 +3567,251 @@ async function scanSelectedWatchtowers() {
       results.forEach((result) => {
         storePlayerBuildingRows(result.playerKey, result.buildingRows || []);
       });
-      state.watchtowerSelectedPlayerIds = new Set();
+      if (clearSelectionOnSuccess) {
+        state.watchtowerSelectedPlayerIds = new Set();
+      }
+      state.watchtowerScanProgress = null;
       renderWatchtowerStatus();
     }
   } catch (error) {
     if (scanId === state.watchtowerScanId) {
       showToast(error.message || "Could not evaluate players.");
+      state.watchtowerScanProgress = null;
       renderWatchtowerStatus("Evaluation failed. Try again in a moment.");
     }
   } finally {
     if (scanId === state.watchtowerScanId) {
       selectedPlayers.forEach((player) => state.watchtowerLoadingPlayerIds.delete(getPlayerKey(player)));
       state.watchtowerScanActive = false;
+      state.watchtowerScanProgress = null;
       renderRosterTable();
-      renderScanResultViews();
+      if (useQuietAllRefresh) {
+        if (completedPlayerKeys.length > 0) {
+          refreshAllRowsForPlayers(completedPlayerKeys);
+        } else {
+          refreshAllPlayerScanControls(selectedPlayerKeys);
+        }
+      } else {
+        renderScanResultViews();
+      }
       renderAllianceData(false, false);
     }
   }
+}
+
+async function loadHomeCastles() {
+  const playerName = (state.homePlayerName || elements.homePlayerInput?.value || elements.allHomePlayerInput?.value || "").trim();
+  if (!playerName) {
+    showToast("Type or select your player name first.");
+    renderDistanceChart();
+    return;
+  }
+
+  state.homePlayerName = playerName;
+  state.homeCastleLoading = true;
+  state.homeCastles = [];
+  state.selectedHomeCastleKey = "";
+  localStorage.setItem(HOME_PLAYER_STORAGE_KEY, playerName);
+  localStorage.removeItem(HOME_CASTLE_STORAGE_KEY);
+  closeHomePlayerMenu();
+  renderDistanceChart();
+  renderWatchtowerStatus(`Loading castles for ${playerName}...`);
+
+  try {
+    const castles = normalizeCastleSearchResponse(await apiFetchWithRetry(`castle/search/${encodeURIComponent(playerName)}`))
+      .map(mapHomeCastle)
+      .filter((castle) => castle && castle.isAvailable && hasCastlePosition(castle))
+      .sort(sortScanResultCastles);
+
+    state.homeCastles = castles;
+    state.selectedHomeCastleKey = pickDefaultHomeCastleKey(castles);
+    if (state.selectedHomeCastleKey) {
+      localStorage.setItem(HOME_CASTLE_STORAGE_KEY, state.selectedHomeCastleKey);
+    }
+    if (castles.length > 0) {
+      saveHomePlayerToHistory(playerName);
+    }
+    if (castles.length === 0) {
+      showToast(`No available positioned castles found for ${playerName}.`);
+    }
+    renderWatchtowerStatus();
+  } catch (error) {
+    showToast(error.message || "Could not load your castles.");
+    renderWatchtowerStatus(`Castle lookup failed for ${playerName}. Try again in a moment.`);
+  } finally {
+    state.homeCastleLoading = false;
+    renderDistanceChart();
+    renderScanResultViews();
+  }
+}
+
+async function ensureAllianceDistanceRows({ force = false } = {}) {
+  const cacheKey = getDistanceAllianceCacheKey();
+  if (!cacheKey || !state.currentAlliance) {
+    state.distanceRows = [];
+    state.distanceLoading = false;
+    state.distanceLoadError = "";
+    renderDistanceChart();
+    renderAllChart();
+    return;
+  }
+
+  if (!force && state.distanceRowsByAlliance.has(cacheKey)) {
+    state.distanceRows = cloneDistanceRows(state.distanceRowsByAlliance.get(cacheKey));
+    state.distanceLoading = false;
+    state.distanceLoadError = "";
+    renderDistanceChart();
+    renderAllChart();
+    return;
+  }
+
+  if (state.distanceLoading) return;
+
+  const loadId = state.distanceLoadId + 1;
+  state.distanceLoadId = loadId;
+  state.distanceLoading = true;
+  state.distanceLoadError = "";
+  renderDistanceChart();
+  renderAllChart();
+  renderWatchtowerStatus(`Loading castle coordinates for ${state.currentAlliance.alliance_name}...`);
+
+  try {
+    const data = await apiFetchWithRetry(`cartography/id/${encodeURIComponent(state.currentAlliance.alliance_id)}`, 2);
+    const rows = normalizeCartographyDistanceRows(data);
+    if (loadId !== state.distanceLoadId || cacheKey !== getDistanceAllianceCacheKey()) return;
+
+    state.distanceRows = rows;
+    cacheDistanceRowsForAllianceKey(cacheKey, rows);
+    renderWatchtowerStatus(rows.length > 0
+      ? `Loaded coordinate rows for ${formatNumber(rows.length)} alliance ${rows.length === 1 ? "player" : "players"}.`
+      : "No positioned player castles were returned for this alliance.");
+  } catch (error) {
+    if (loadId !== state.distanceLoadId) return;
+    state.distanceRows = [];
+    state.distanceLoadError = error.message || "Could not load alliance castle coordinates.";
+    showToast("Could not load alliance castle coordinates.");
+    renderWatchtowerStatus("Distance coordinate load failed. Try opening the tab again in a moment.");
+  } finally {
+    if (loadId === state.distanceLoadId) {
+      state.distanceLoading = false;
+      renderDistanceChart();
+      renderAllChart();
+      renderAllianceData(false, false);
+    }
+  }
+}
+
+function normalizeCartographyDistanceRows(value) {
+  const entries = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.players)
+      ? value.players
+      : Array.isArray(value?.data)
+        ? value.data
+        : [];
+  const rosterByName = new Map(
+    state.players.map((player) => [String(player.player_name || "").trim().toLowerCase(), player]),
+  );
+
+  return entries
+    .map((entry, index) => mapCartographyDistanceRow(entry, index, rosterByName))
+    .filter(Boolean)
+    .sort(sortDistanceRows);
+}
+
+function mapCartographyDistanceRow(entry, fallbackIndex, rosterByName) {
+  if (!entry || typeof entry !== "object") return null;
+  const playerName = String(entry.name || entry.player_name || entry.playerName || "").trim();
+  if (!playerName) return null;
+
+  const rosterPlayer = rosterByName.get(playerName.toLowerCase());
+  const rawCastles = [
+    ...parseCartographyCastleList(entry.castles).map((castle) => mapCartographyCastle(castle, 0, false)),
+    ...parseCartographyCastleList(entry.castles_realm ?? entry.castlesRealm).map((castle) => mapCartographyCastle(castle, 0, true)),
+  ].filter(Boolean);
+
+  if (rawCastles.length === 0) return null;
+
+  const sortedCastles = rawCastles.sort(sortScanResultCastles);
+  const typeTotals = sortedCastles.reduce((totals, castle) => {
+    const key = getDistanceCastleTypeKey(castle);
+    totals.set(key, (totals.get(key) || 0) + 1);
+    return totals;
+  }, new Map());
+  const typeCounts = new Map();
+  const castles = sortedCastles.map((castle, index) => {
+    const key = getDistanceCastleTypeKey(castle);
+    const count = (typeCounts.get(key) || 0) + 1;
+    typeCounts.set(key, count);
+    const typeName = getCastleTypeName(castle.castleType);
+    return {
+      ...castle,
+      castleName: typeTotals.get(key) > 1 ? `${typeName} ${count}` : typeName,
+      displayIndex: index,
+    };
+  });
+
+  return normalizeDistanceResultRow({
+    playerKey: rosterPlayer ? getPlayerKey(rosterPlayer) : `cartography:${playerName.toLowerCase()}`,
+    playerName,
+    rank: rosterPlayer?.alliance_rank ?? fallbackIndex + 1,
+    mightCurrent: entry.might_current,
+    castles,
+  });
+}
+
+function parseCartographyCastleList(value) {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string") return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function mapCartographyCastle(value, defaultKingdomId = 0, isRealmCastle = false) {
+  if (!value) return null;
+  const isArrayValue = Array.isArray(value);
+  const kingdomId = isRealmCastle
+    ? Number(isArrayValue ? value[0] : value.kingdomId ?? value.kingdom_id ?? defaultKingdomId)
+    : Number(isArrayValue ? defaultKingdomId : value.kingdomId ?? value.kingdom_id ?? defaultKingdomId);
+  const positionX = parseCoordinate(isArrayValue ? value[isRealmCastle ? 1 : 0] : value.positionX ?? value.x);
+  const positionY = parseCoordinate(isArrayValue ? value[isRealmCastle ? 2 : 1] : value.positionY ?? value.y);
+  const fallbackType = kingdomId === 0 ? 1 : 12;
+  const castleType = Number(isArrayValue ? value[isRealmCastle ? 3 : 2] : value.castleType ?? value.type ?? fallbackType) || fallbackType;
+
+  if (!DISTANCE_TARGET_CASTLE_TYPES.has(castleType) || !Number.isFinite(positionX) || !Number.isFinite(positionY)) {
+    return null;
+  }
+
+  const castleId = `cartography:${kingdomId}:${positionX}:${positionY}:${castleType}`;
+  return {
+    key: castleId,
+    castleId,
+    castleName: getCastleTypeName(castleType),
+    castleType,
+    castleIconUrl: getCastleIconUrl({ type: castleType }),
+    kingdomId,
+    positionX,
+    positionY,
+    displayIndex: 0,
+  };
+}
+
+function getDistanceCastleTypeKey(castle) {
+  return `${Number(castle.kingdomId || 0)}:${Number(castle.castleType || 0)}`;
+}
+
+function sortDistanceRows(a, b) {
+  const rankA = Number(a.rank);
+  const rankB = Number(b.rank);
+  if (Number.isFinite(rankA) && Number.isFinite(rankB) && rankA !== rankB) return rankA - rankB;
+  if (Number.isFinite(rankA) !== Number.isFinite(rankB)) return Number.isFinite(rankA) ? -1 : 1;
+  const mightSort = Number(b.mightCurrent || 0) - Number(a.mightCurrent || 0);
+  if (mightSort !== 0) return mightSort;
+  return String(a.playerName || "").localeCompare(String(b.playerName || ""), undefined, { sensitivity: "base" });
 }
 
 async function fetchPlayerWatchtowerRow(player) {
@@ -2395,6 +3895,8 @@ function mapWatchtowerCastleResult(castle, castleData, error, structures = null,
     castleType: Number(castle.type || castleData?.castleType || 0),
     castleIconUrl: getCastleIconUrl(castle),
     kingdomId: Number(castle.kingdomId || 0),
+    positionX: parseCoordinate(castle.positionX),
+    positionY: parseCoordinate(castle.positionY),
     displayIndex,
     level: levels.length > 0 ? Math.max(...levels) : null,
     count: watchtowers.length,
@@ -2409,6 +3911,40 @@ function mapAttackScoreCastleResult(target, error, displayIndex = 0) {
     displayIndex,
     error: error ? true : null,
   };
+}
+
+function mapHomeCastle(castle, displayIndex = 0) {
+  if (!castle || typeof castle !== "object") return null;
+  return {
+    key: getHomeCastleKey(castle),
+    castleId: String(castle.id || ""),
+    castleName: String(castle.name || "Unnamed castle"),
+    castleType: Number(castle.type || 0),
+    castleIconUrl: getCastleIconUrl(castle),
+    kingdomId: Number(castle.kingdomId || 0),
+    positionX: parseCoordinate(castle.positionX),
+    positionY: parseCoordinate(castle.positionY),
+    isAvailable: Boolean(castle.isAvailable),
+    displayIndex,
+  };
+}
+
+function getHomeCastleKey(castle) {
+  return [
+    castle.id || castle.castleId || castle.name,
+    castle.kingdomId,
+    castle.type || castle.castleType,
+    castle.positionX,
+    castle.positionY,
+  ].map((part) => String(part || "")).join("|");
+}
+
+function pickDefaultHomeCastleKey(castles) {
+  if (!Array.isArray(castles) || castles.length === 0) return "";
+  const existing = castles.find((castle) => castle.key === state.selectedHomeCastleKey);
+  if (existing) return existing.key;
+  const mainCastle = castles.find((castle) => Number(castle.kingdomId) === 0 && Number(castle.castleType) === 1);
+  return (mainCastle || castles[0]).key;
 }
 
 function sortScanResultCastles(a, b) {
@@ -2687,7 +4223,9 @@ function normalizeConstructionItem(item) {
   const slotTypeID = Number(item.slotTypeID || 0);
   const rarityId = Number(item.rarenessID || 0);
   const level = slotTypeID === 0 ? 1 : Number(item.level || 0);
-  return {
+  const effect = getConstructionItemEffectDefinition(item);
+  const statValues = getConstructionItemStatValues(item);
+  const normalized = {
     id: Number(item.constructionItemID || 0),
     name: String(item.name || ""),
     displayName: formatConstructionItemName(item),
@@ -2700,7 +4238,41 @@ function normalizeConstructionItem(item) {
     boxUrl: getConstructionItemBoxUrl(slotTypeID, rarityId),
     effectText: getConstructionItemEffectText(item),
     comment: formatConstructionComment(item.comment2 || item.comment1 || ""),
+    effectId: effect.id,
+    effectValue: effect.value,
+    effectName: effect.name,
+    effectTypeName: effect.typeName,
+    statValues,
   };
+  const defenseProfile = getDefensiveConstructionItemProfile(normalized);
+  return {
+    ...normalized,
+    defensiveScore: defenseProfile.score,
+    defensiveSignals: defenseProfile.signals,
+    defensiveKind: defenseProfile.kind,
+  };
+}
+
+function getConstructionItemEffectDefinition(item) {
+  const [rawEffectId, rawValue] = String(item?.effects || "").split("&");
+  const id = String(rawEffectId || "").trim();
+  const effect = id ? state.effectById.get(id) : null;
+  const effectType = effect ? state.effectTypeById.get(String(effect.effectTypeID)) : null;
+  const value = Number(rawValue);
+  return {
+    id,
+    value: Number.isFinite(value) ? value : null,
+    name: String(effect?.name || ""),
+    typeName: String(effectType?.name || ""),
+  };
+}
+
+function getConstructionItemStatValues(item) {
+  return [...DIRECT_DEFENSIVE_CONSTRUCTION_STAT_KEYS].reduce((values, key) => {
+    const value = Number(item?.[key]);
+    if (Number.isFinite(value) && value !== 0) values[key] = value;
+    return values;
+  }, {});
 }
 
 function buildMissingBuildingRow(player, castle, castleData, filter, displayIndex = 0) {
@@ -2791,7 +4363,10 @@ function buildTargetEvaluation(player, scanData) {
 function scoreCastleTarget(player, scanData, castle, result) {
   const defense = scoreDefenseStrength(castle, result?.structures || []);
   const publicOrder = scoreDefensivePublicOrder(result?.castleData);
-  const constructionItemRows = mapDefensiveConstructionItemRows(player, castle, result?.structures || []);
+  const constructionItemRows = addConstructionItemScoreContributions(
+    mapDefensiveConstructionItemRows(player, castle, result?.structures || []),
+    defense.constructionItemStats,
+  );
   const defenseScore = Math.round(defense.score * 0.8 + publicOrder.score * 0.2);
   const categories = {
     defense: makeScoreCategory("Defense strength", defenseScore, [...defense.details, ...publicOrder.details], [...defense.notes, ...publicOrder.notes]),
@@ -2805,10 +4380,13 @@ function scoreCastleTarget(player, scanData, castle, result) {
 
   return {
     key: getCastleTargetKey(scanData.playerKey, castle),
+    castleId: castle.id || "",
     castleName: castle.name || "Unnamed castle",
     castleType: Number(castle.type || 0),
     castleIconUrl: getCastleIconUrl(castle),
     kingdomId: Number(castle.kingdomId || 0),
+    positionX: parseCoordinate(castle.positionX),
+    positionY: parseCoordinate(castle.positionY),
     score: clampNumber(score, 0, 100),
     verdict: getTargetVerdict(score),
     verdictClass: getTargetVerdictClass(getTargetVerdict(score)),
@@ -2869,23 +4447,30 @@ function scoreDefenseStrength(castle, structures) {
 
   const constructionItemStats = getDefensiveConstructionItemStats(structures);
   const constructionItemStrength = constructionItemStats.strength;
-  weighted += constructionItemStrength * 5;
-  totalWeight += 5;
+  weighted += constructionItemStrength * CONSTRUCTION_ITEM_DEFENSE_WEIGHT;
+  totalWeight += CONSTRUCTION_ITEM_DEFENSE_WEIGHT;
   details.push(
     {
       label: "Construction items",
-      value: `${constructionItemStats.withItems}/${constructionItemStats.total} defensive buildings equipped`,
+      value: constructionItemStats.itemCount > 0
+        ? `${constructionItemStats.itemCount} defensive ${constructionItemStats.itemCount === 1 ? "item" : "items"} on ${constructionItemStats.withItems}/${constructionItemStats.total || constructionItemStats.withItems} item-slot buildings`
+        : `0/${constructionItemStats.total} item-slot buildings`,
       score: Math.round(constructionItemStrength),
       action: "constructionItems",
-      note: "One Defense strength stat based on how many defensive buildings have build items. Click to inspect the buildings.",
+      note: "One Defense strength stat from defensive effects found on any building with equipped build items. Click to inspect the buildings.",
     },
   );
-  if (constructionItemStats.weakness >= 70) notes.push("Few defensive construction items detected.");
+  if (constructionItemStats.itemCount === 0) {
+    notes.push("No defensive construction items detected.");
+  } else if (constructionItemStats.weakness >= 70) {
+    notes.push(`${constructionItemStats.itemCount} defensive construction ${constructionItemStats.itemCount === 1 ? "item was" : "items were"} detected, but the item strength looks limited.`);
+  }
 
   return {
     score: Math.round(weighted / totalWeight),
     notes,
     details,
+    constructionItemStats,
   };
 }
 
@@ -2941,13 +4526,7 @@ function makeGuardhouseDefenseMetric(structures, weight) {
 
 function scoreDefensivePublicOrder(castleData) {
   const items = extractDefensivePublicOrderItems(castleData);
-  const publicOrderTotal = items.reduce((sum, item) => sum + item.publicOrder, 0);
-  const totals = items.reduce((result, item) => {
-    item.effects.forEach((effect) => {
-      result[effect.type] = (result[effect.type] || 0) + effect.value;
-    });
-    return result;
-  }, {});
+  const scoring = getPublicOrderScoringParts(items);
 
   if (items.length === 0) {
     return {
@@ -2965,28 +4544,79 @@ function scoreDefensivePublicOrder(castleData) {
     };
   }
 
-  const poScore = Math.min(publicOrderTotal, 32000) / 32000 * 30;
-  const yardScore = Math.min(totals.yardPercent || 0, 130) / 130 * 25;
-  const wallScore = Math.min(totals.wallPercent || 0, 160) / 160 * 25;
-  const defenseScore = Math.min(totals.defensePercent || 0, 130) / 130 * 10;
-  const flatScore = Math.min((totals.flatWall || 0) + (totals.flatDefense || 0), 37500) / 37500 * 10;
-  const score = Math.round(clampNumber(poScore + yardScore + wallScore + defenseScore + flatScore, 0, 100));
+  const itemsWithContributions = addPublicOrderScoreContributions(items, scoring);
 
   return {
-    score,
-    publicOrderTotal,
-    items,
+    score: scoring.score,
+    publicOrderTotal: scoring.publicOrderTotal,
+    items: itemsWithContributions,
     notes: [`${items.length} defense-enhancing PO ${items.length === 1 ? "piece" : "pieces"} found.`],
     details: [
       {
         label: "Public order bonus",
-        value: `${items.length} ${items.length === 1 ? "piece" : "pieces"} - ${formatNumber(publicOrderTotal)} PO`,
-        score,
+        value: `${items.length} ${items.length === 1 ? "piece" : "pieces"} - ${formatNumber(scoring.publicOrderTotal)} PO`,
+        score: scoring.score,
         action: "publicOrder",
         note: "One Defense strength stat combining defense-enhancing pieces, courtyard defense, wall capacity, and flat troop-capacity bonuses. Click to inspect pieces.",
       },
     ],
   };
+}
+
+function getPublicOrderScoringParts(items) {
+  const publicOrderTotal = items.reduce((sum, item) => sum + Number(item.publicOrder || 0), 0);
+  const totals = items.reduce((result, item) => {
+    (Array.isArray(item.effects) ? item.effects : []).forEach((effect) => {
+      result[effect.type] = (result[effect.type] || 0) + Number(effect.value || 0);
+    });
+    return result;
+  }, {});
+  const componentScores = {
+    publicOrder: Math.min(publicOrderTotal, 32000) / 32000 * 30,
+    yardPercent: Math.min(totals.yardPercent || 0, 130) / 130 * 25,
+    wallPercent: Math.min(totals.wallPercent || 0, 160) / 160 * 25,
+    defensePercent: Math.min(totals.defensePercent || 0, 130) / 130 * 10,
+    flatCapacity: Math.min((totals.flatWall || 0) + (totals.flatDefense || 0), 37500) / 37500 * 10,
+  };
+  const score = Math.round(clampNumber(Object.values(componentScores).reduce((sum, value) => sum + value, 0), 0, 100));
+  return {
+    publicOrderTotal,
+    totals,
+    componentScores,
+    score,
+  };
+}
+
+function addPublicOrderScoreContributions(items, scoring = getPublicOrderScoringParts(items)) {
+  const flatTotal = (scoring.totals.flatWall || 0) + (scoring.totals.flatDefense || 0);
+  return items.map((item) => {
+    const effectTotals = getPublicOrderEffectTotals(item.effects);
+    const contribution =
+      getProportionalScoreContribution(item.publicOrder, scoring.publicOrderTotal, scoring.componentScores.publicOrder) +
+      getProportionalScoreContribution(effectTotals.yardPercent, scoring.totals.yardPercent, scoring.componentScores.yardPercent) +
+      getProportionalScoreContribution(effectTotals.wallPercent, scoring.totals.wallPercent, scoring.componentScores.wallPercent) +
+      getProportionalScoreContribution(effectTotals.defensePercent, scoring.totals.defensePercent, scoring.componentScores.defensePercent) +
+      getProportionalScoreContribution((effectTotals.flatWall || 0) + (effectTotals.flatDefense || 0), flatTotal, scoring.componentScores.flatCapacity);
+    return {
+      ...item,
+      scoreContribution: clampNumber(contribution, 0, 100),
+    };
+  });
+}
+
+function getPublicOrderEffectTotals(effects = []) {
+  return effects.reduce((result, effect) => {
+    result[effect.type] = (result[effect.type] || 0) + Number(effect.value || 0);
+    return result;
+  }, {});
+}
+
+function getProportionalScoreContribution(value, total, score) {
+  const normalizedValue = Math.max(0, Number(value || 0));
+  const normalizedTotal = Math.max(0, Number(total || 0));
+  const normalizedScore = Math.max(0, Number(score || 0));
+  if (normalizedValue <= 0 || normalizedTotal <= 0 || normalizedScore <= 0) return 0;
+  return normalizedValue / normalizedTotal * normalizedScore;
 }
 
 function extractDefensivePublicOrderItems(castleData) {
@@ -3110,36 +4740,67 @@ function mapDefensiveConstructionItemRows(player, castle, structures) {
     });
 }
 
+function addConstructionItemScoreContributions(rows, stats = null) {
+  const allItems = rows.flatMap((row) => {
+    const instances = Array.isArray(row.instances) ? row.instances : [];
+    return instances.flatMap((instance) => Array.isArray(instance.constructionItems) ? instance.constructionItems : []);
+  });
+  const itemPower = Math.max(0, Number(stats?.itemPower || 0)) ||
+    allItems.reduce((sum, item) => sum + getDefensiveConstructionItemPower(item), 0);
+  const strength = Math.max(0, Number(stats?.strength || 0));
+
+  return rows.map((row) => ({
+    ...row,
+    instances: (Array.isArray(row.instances) ? row.instances : []).map((instance) => ({
+      ...instance,
+      constructionItems: (Array.isArray(instance.constructionItems) ? instance.constructionItems : []).map((item) => {
+        const power = getDefensiveConstructionItemPower(item);
+        const scoreContribution = itemPower > 0 && strength > 0 ? power / itemPower * strength : 0;
+        return {
+          ...item,
+          scoreContribution: clampNumber(scoreContribution, 0, 100),
+        };
+      }),
+    })),
+  }));
+}
+
 function getDefensiveConstructionItemStats(structures) {
-  const defensiveStructures = structures.filter(isDefensiveStructure);
+  const itemSlotStructures = structures.filter(hasConstructionItemSlots);
   const structuresWithDefensiveItems = structures.filter((structure) => getDefensiveConstructionItems(structure).length > 0);
-  const total = Math.max(defensiveStructures.length, structuresWithDefensiveItems.length);
-  if (defensiveStructures.length === 0) {
-    return {
-      total,
-      withItems: structuresWithDefensiveItems.length,
-      itemCount: structuresWithDefensiveItems.reduce((sum, structure) => sum + getDefensiveConstructionItems(structure).length, 0),
-      weakness: 100,
-      strength: total > 0 ? 100 : 0,
-    };
-  }
+  const defensiveItems = structuresWithDefensiveItems.flatMap((structure) => getDefensiveConstructionItems(structure));
+  const total = Math.max(itemSlotStructures.length, structuresWithDefensiveItems.length);
   const withItems = structuresWithDefensiveItems.length;
-  const itemCount = structuresWithDefensiveItems.reduce((sum, structure) => sum + getDefensiveConstructionItems(structure).length, 0);
-  const weakness = clampNumber(100 - (withItems / total) * 100, 0, 100);
+  const itemCount = defensiveItems.length;
+  const itemPower = defensiveItems.reduce((sum, item) => sum + getDefensiveConstructionItemPower(item), 0);
+  const strongestItem = defensiveItems.reduce((max, item) => Math.max(max, getDefensiveConstructionItemPower(item)), 0);
+  const scaledItemPower = itemPower * CONSTRUCTION_ITEM_SCORE_SPEED;
+  const scaledStrongestItem = strongestItem * CONSTRUCTION_ITEM_SCORE_SPEED;
+  const scaledItemCount = itemCount * CONSTRUCTION_ITEM_SCORE_SPEED;
+  const scaledCoverage = withItems * CONSTRUCTION_ITEM_SCORE_SPEED;
+  const powerScore = scaledItemPower > 0 ? 100 * (1 - Math.exp(-scaledItemPower / 115)) : 0;
+  const countScore = scaledItemCount > 0 ? 100 * (1 - Math.exp(-scaledItemCount / 2.25)) : 0;
+  const coverageTarget = Math.max(1, Math.min(8, total || withItems || 1));
+  const coverageScore = scaledCoverage > 0 ? clampNumber((scaledCoverage / coverageTarget) * 100, 0, 100) : 0;
+  const strength = clampNumber(
+    Math.max(scaledStrongestItem * 0.9, powerScore * 0.7 + countScore * 0.2 + coverageScore * 0.1),
+    0,
+    100,
+  );
   return {
     total,
     withItems,
     itemCount,
-    weakness,
-    strength: 100 - weakness,
+    itemPower,
+    weakness: 100 - strength,
+    strength,
   };
 }
 
-function isDefensiveStructure(structure) {
-  return (
-    ["tower", "gate", "moat", "defence"].includes(structure.group) ||
-    ["watchtower", "factionwatchtower", "keep", "guardpost", "factionguardpost", "stronghold", "reinforcedvault"].includes(structure.name)
-  );
+function hasConstructionItemSlots(structure) {
+  return String(structure?.item?.constructionItemGroupIDs || "")
+    .split(",")
+    .some((groupId) => groupId.trim());
 }
 
 function getDefensiveConstructionItems(structure) {
@@ -3147,11 +4808,117 @@ function getDefensiveConstructionItems(structure) {
 }
 
 function isDefensiveConstructionItem(item) {
+  return getDefensiveConstructionItemProfile(item).score > 0;
+}
+
+function getDefensiveConstructionItemPower(item) {
+  return getDefensiveConstructionItemProfile(item).score;
+}
+
+function getDefensiveConstructionItemProfile(item) {
+  const signals = [];
+  const effectTypeKey = normalizeConstructionItemSignalKey(item?.effectTypeName);
+  const effectNameKey = normalizeConstructionItemSignalKey(item?.effectName);
+  const effectIdTypeKey = DIRECT_DEFENSIVE_CONSTRUCTION_EFFECT_ID_TYPES.get(String(item?.effectId || ""));
+  const effectValue = Number(item?.effectValue);
+
+  if (DIRECT_DEFENSIVE_CONSTRUCTION_EFFECT_TYPES.has(effectTypeKey)) {
+    signals.push({
+      kind: "direct",
+      label: item.effectTypeName || item.effectName || "Defensive effect",
+      score: scoreDefensiveConstructionEffect(effectTypeKey, effectValue, item),
+    });
+  } else if (effectIdTypeKey) {
+    signals.push({
+      kind: "direct",
+      label: item.effectName || item.effectTypeName || `Effect ${item.effectId}`,
+      score: scoreDefensiveConstructionEffect(effectIdTypeKey, effectValue, item),
+    });
+  } else if (DIRECT_DEFENSIVE_CONSTRUCTION_EFFECT_TYPES.has(effectNameKey)) {
+    signals.push({
+      kind: "direct",
+      label: item.effectName || "Defensive effect",
+      score: scoreDefensiveConstructionEffect(effectNameKey, effectValue, item),
+    });
+  }
+
+  Object.entries(item?.statValues || {}).forEach(([key, value]) => {
+    if (DIRECT_DEFENSIVE_CONSTRUCTION_STAT_KEYS.has(key)) {
+      signals.push({
+        kind: "direct",
+        label: formatConstructionComment(key),
+        score: scoreDefensiveConstructionStat(key, value, item),
+      });
+    }
+  });
+
+  if (signals.length === 0 && shouldUseConstructionItemKeywordFallback(item)) {
+    signals.push({
+      kind: "keyword",
+      label: "Defensive wording",
+      score: Math.max(20, Math.min(65, getConstructionItemRarityScore(item) + Number(item?.level || 0) * 1.5)),
+    });
+  }
+
+  const score = clampNumber(signals.reduce((max, signal) => Math.max(max, signal.score), 0), 0, 100);
+  const kind = signals.some((signal) => signal.kind === "direct")
+    ? "direct"
+    : signals.length > 0
+      ? "keyword"
+      : "";
+  return {
+    score,
+    kind,
+    signals: signals.map((signal) => signal.label).filter(Boolean),
+  };
+}
+
+function scoreDefensiveConstructionEffect(effectTypeKey, value, item) {
+  const cap = CONSTRUCTION_ITEM_EFFECT_SCORE_CAPS.get(effectTypeKey);
+  if (Number.isFinite(value) && value > 0 && cap) {
+    return clampNumber((value / cap) * 100, 0, 100);
+  }
+  return Math.max(25, Math.min(85, getConstructionItemRarityScore(item) + Number(item?.level || 0) * 1.5));
+}
+
+function scoreDefensiveConstructionStat(key, value, item) {
+  const cap = CONSTRUCTION_ITEM_STAT_SCORE_CAPS.get(key);
+  if (Number.isFinite(Number(value)) && Number(value) > 0 && cap) {
+    return clampNumber((Number(value) / cap) * 100, 0, 100);
+  }
+  return Math.max(20, Math.min(70, getConstructionItemRarityScore(item) + Number(item?.level || 0)));
+}
+
+function getConstructionItemRarityScore(item) {
+  switch (String(item?.rarityName || "").toLowerCase()) {
+    case "unique":
+      return 72;
+    case "legendary":
+      return 64;
+    case "epic":
+      return 52;
+    case "rare":
+      return 38;
+    case "common":
+      return 24;
+    default:
+      return 28;
+  }
+}
+
+function shouldUseConstructionItemKeywordFallback(item) {
   const searchText = getConstructionItemSearchText(item);
+  if (item?.effectName || item?.effectTypeName || Object.keys(item?.statValues || {}).length > 0) {
+    return false;
+  }
   if (NON_DEFENSIVE_CONSTRUCTION_ITEM_KEYWORDS.some((keyword) => constructionItemTextIncludes(searchText, keyword))) {
     return false;
   }
   return DEFENSIVE_CONSTRUCTION_ITEM_KEYWORDS.some((keyword) => constructionItemTextIncludes(searchText, keyword));
+}
+
+function normalizeConstructionItemSignalKey(value) {
+  return String(value || "").toLowerCase().replaceAll(/[^a-z0-9]+/g, "");
 }
 
 function getConstructionItemSearchText(item) {
@@ -3303,16 +5070,59 @@ function getConfidenceLabel(score) {
 }
 
 function renderWatchtowerStatus(customStatus) {
-  if (customStatus) {
+  if (state.watchtowerScanActive && state.watchtowerScanProgress?.total) {
     elements.watchtowerStatus.hidden = false;
-    elements.watchtowerStatus.textContent = customStatus;
+    elements.watchtowerStatus.innerHTML = renderWatchtowerAttackStatus(customStatus);
     syncRosterStatusVisibility();
     return;
   }
 
-  elements.watchtowerStatus.textContent = "";
+  if (customStatus) {
+    elements.watchtowerStatus.hidden = false;
+    elements.watchtowerStatus.innerHTML = `<p>${escapeHtml(customStatus)}</p>`;
+    syncRosterStatusVisibility();
+    return;
+  }
+
+  elements.watchtowerStatus.innerHTML = "";
   elements.watchtowerStatus.hidden = true;
   syncRosterStatusVisibility();
+}
+
+function renderWatchtowerAttackStatus(customStatus = "") {
+  const progress = state.watchtowerScanProgress || {};
+  const total = Math.max(1, Number(progress.total || 1));
+  const completed = Math.max(0, Math.min(total, Number(progress.completed || 0)));
+  const percent = Math.max(3, Math.min(100, (completed / total) * 100));
+  const status = customStatus
+    || (completed >= total
+      ? "Attack reports returning..."
+      : progress.currentPlayerName
+        ? `Marching on ${progress.currentPlayerName}`
+        : `Launching ${total === 1 ? "attack" : "attacks"} from the castle`);
+  return `
+    <div class="scan-march" style="--scan-progress: ${percent}%">
+      <div class="scan-march__meta">
+        <span class="label">Evaluation march</span>
+        <strong>${escapeHtml(status)}</strong>
+        <small>${formatNumber(completed)} / ${formatNumber(total)} ${total === 1 ? "player" : "players"} evaluated</small>
+      </div>
+      <div class="scan-march__field" aria-hidden="true">
+        <div class="scan-march__castle scan-march__castle--home">
+          <img src="../gge-tracker/gge-tracker-frontend/src/assets/castle1.png" alt="">
+        </div>
+        <div class="scan-march__path">
+          <span class="scan-march__arrow"></span>
+          <span class="scan-march__army">
+            <img src="../gge-tracker/gge-tracker-frontend/src/assets/troop.png" alt="">
+          </span>
+        </div>
+        <div class="scan-march__castle scan-march__castle--target">
+          <img src="../gge-tracker/gge-tracker-frontend/src/assets/castle4.png" alt="">
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function syncRosterStatusVisibility() {
@@ -3355,9 +5165,10 @@ function resetWatchtowerScanState({ restoreResults = false } = {}) {
   if (restoreResults) {
     restoreWatchtowerResultsForCurrentAlliance();
   } else {
-    state.watchtowerResults = new Map();
+  state.watchtowerResults = new Map();
   }
   state.watchtowerScanActive = false;
+  state.watchtowerScanProgress = null;
   state.activeRosterTab = "roster";
 }
 
@@ -3442,6 +5253,69 @@ function persistWatchtowerSessionCache() {
   }
 }
 
+function getDistanceAllianceCacheKey(alliance = state.currentAlliance, server = state.server) {
+  return getWatchtowerAllianceCacheKey(alliance, server);
+}
+
+function cacheCurrentDistanceRows() {
+  const cacheKey = getDistanceAllianceCacheKey();
+  if (!cacheKey || (!state.distanceRowsByAlliance.has(cacheKey) && state.distanceRows.length === 0)) return;
+  cacheDistanceRowsForAllianceKey(cacheKey, state.distanceRows);
+}
+
+function cacheDistanceRowsForAllianceKey(cacheKey, rows) {
+  if (!cacheKey) return;
+  state.distanceRowsByAlliance.set(cacheKey, cloneDistanceRows(rows));
+  persistDistanceSessionCache();
+}
+
+function restoreDistanceRowsForCurrentAlliance() {
+  state.distanceLoadId += 1;
+  state.distanceLoading = false;
+  state.distanceLoadError = "";
+  const cacheKey = getDistanceAllianceCacheKey();
+  const cachedRows = cacheKey && state.distanceRowsByAlliance.has(cacheKey)
+    ? state.distanceRowsByAlliance.get(cacheKey)
+    : null;
+  state.distanceRows = cachedRows ? cloneDistanceRows(cachedRows) : [];
+}
+
+function cloneDistanceRows(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map(normalizeDistanceResultRow)
+    .filter(Boolean)
+    .sort(sortDistanceRows);
+}
+
+function loadDistanceSessionCache() {
+  try {
+    const rawCache = sessionStorage.getItem(DISTANCE_SESSION_CACHE_KEY);
+    if (!rawCache) return new Map();
+    const parsedCache = JSON.parse(rawCache);
+    if (!parsedCache || typeof parsedCache !== "object") return new Map();
+
+    const cache = new Map();
+    Object.entries(parsedCache).forEach(([cacheKey, rows]) => {
+      cache.set(cacheKey, cloneDistanceRows(rows));
+    });
+    return cache;
+  } catch {
+    return new Map();
+  }
+}
+
+function persistDistanceSessionCache() {
+  try {
+    const cache = {};
+    state.distanceRowsByAlliance.forEach((rows, cacheKey) => {
+      cache[cacheKey] = cloneDistanceRows(rows);
+    });
+    sessionStorage.setItem(DISTANCE_SESSION_CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Session storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
 function normalizeWatchtowerResultRow(row) {
   if (!row || typeof row !== "object") return null;
   const playerKey = String(row.playerKey || "");
@@ -3470,10 +5344,54 @@ function normalizeWatchtowerCastleResult(castle) {
     castleType: Number(castle.castleType || 0),
     castleIconUrl: String(castle.castleIconUrl || ""),
     kingdomId: Number(castle.kingdomId || 0),
+    positionX: parseCoordinate(castle.positionX),
+    positionY: parseCoordinate(castle.positionY),
     displayIndex: Math.max(0, Math.trunc(Number(castle.displayIndex) || 0)),
     level: Number.isFinite(level) ? level : null,
     count: Math.max(0, Math.trunc(Number(castle.count) || 0)),
     error: castle.error ? true : null,
+  };
+}
+
+function normalizeDistanceResultRow(row) {
+  if (!row || typeof row !== "object") return null;
+  const playerName = String(row.playerName || row.name || "").trim();
+  const playerKey = String(row.playerKey || playerName || "").trim();
+  if (!playerKey || !playerName) return null;
+  const castles = (Array.isArray(row.castles) ? row.castles : [])
+    .map(normalizeDistanceCastleResult)
+    .filter(Boolean)
+    .sort(sortScanResultCastles);
+  return {
+    playerKey,
+    playerName,
+    rank: row.rank,
+    mightCurrent: Math.max(0, Math.trunc(parseNumeric(row.mightCurrent ?? row.might_current))),
+    scannedAt: row.scannedAt || new Date().toISOString(),
+    castles,
+  };
+}
+
+function normalizeDistanceCastleResult(castle) {
+  if (!castle || typeof castle !== "object") return null;
+  const kingdomId = Number(castle.kingdomId || 0);
+  const castleType = Number(castle.castleType ?? castle.type ?? (kingdomId === 0 ? 1 : 12));
+  const positionX = parseCoordinate(castle.positionX);
+  const positionY = parseCoordinate(castle.positionY);
+  if (!DISTANCE_TARGET_CASTLE_TYPES.has(castleType) || !Number.isFinite(positionX) || !Number.isFinite(positionY)) {
+    return null;
+  }
+  const castleId = String(castle.castleId || castle.id || `cartography:${kingdomId}:${positionX}:${positionY}:${castleType}`);
+  return {
+    key: String(castle.key || castleId),
+    castleId,
+    castleName: String(castle.castleName || castle.name || getCastleTypeName(castleType)),
+    castleType,
+    castleIconUrl: String(castle.castleIconUrl || getCastleIconUrl({ type: castleType })),
+    kingdomId,
+    positionX,
+    positionY,
+    displayIndex: Math.max(0, Math.trunc(Number(castle.displayIndex) || 0)),
   };
 }
 
@@ -3488,6 +5406,8 @@ function normalizeAttackScoreCastleResult(castle) {
     castleType: Number(castle.castleType || 0),
     castleIconUrl: String(castle.castleIconUrl || ""),
     kingdomId: Number(castle.kingdomId || 0),
+    positionX: parseCoordinate(castle.positionX),
+    positionY: parseCoordinate(castle.positionY),
     displayIndex: Math.max(0, Math.trunc(Number(castle.displayIndex) || 0)),
     score: clampNumber(Number.isFinite(score) ? Math.round(score) : 0, 0, 100),
     verdict: String(castle.verdict || "Insufficient data"),
@@ -3575,12 +5495,21 @@ function serializeWatchtowerResultRow(row) {
 }
 
 function setRosterTab(tabName) {
-  if (!["roster", "watchtowers", "attack-scores"].includes(tabName)) return;
-  if (state.activeRosterTab === tabName) return;
+  if (!["roster", "all"].includes(tabName)) return;
+  if (state.activeRosterTab === tabName) {
+    if (tabName === "all") void ensureAllianceDistanceRows();
+    return;
+  }
   keepViewportStable(document.querySelector(".roster-tabs"), () => {
     state.activeRosterTab = tabName;
     renderRosterTabs();
   });
+  if (tabName === "all") renderAllChart();
+  if (tabName === "all") void ensureAllianceDistanceRows();
+}
+
+function isCompactCastleResultView() {
+  return false;
 }
 
 function renderRosterTabs() {
@@ -3591,8 +5520,7 @@ function renderRosterTabs() {
   });
 
   if (elements.rosterView) elements.rosterView.hidden = state.activeRosterTab !== "roster";
-  if (elements.watchtowerView) elements.watchtowerView.hidden = state.activeRosterTab !== "watchtowers";
-  if (elements.attackScoreView) elements.attackScoreView.hidden = state.activeRosterTab !== "attack-scores";
+  if (elements.allView) elements.allView.hidden = state.activeRosterTab !== "all";
   syncRosterStatusVisibility();
 }
 
@@ -3612,6 +5540,7 @@ function renderWatchtowerControls() {
 function renderScanResultViews() {
   renderWatchtowerChart();
   renderAttackScoreChart();
+  renderAllChart();
 }
 
 function renderWatchtowerChart() {
@@ -3632,8 +5561,11 @@ function renderWatchtowerChart() {
     return;
   }
 
-  const columnCount = Math.max(1, ...rows.map((row) => row.castles.length));
-  const castleHeaders = Array.from({ length: columnCount }, (_, index) => `<th>Castle ${index + 1}</th>`).join("");
+  const compact = isCompactCastleResultView();
+  const columns = compact ? null : getCastleTypeColumns(rows, "castles");
+  const columnCount = compact ? getCompactCastleColumnCount(rows, "castles") : 0;
+  const castleHeaders = compact ? renderCompactCastleHeaders(columnCount) : renderCastleTypeHeaders(columns);
+  const tableMinWidth = compact ? getCompactCastleTableMinWidth(columnCount) : getCastleTypeTableMinWidth(columns);
   elements.watchtowerChart.innerHTML = `
     <div class="watchtower-chart-shell">
       <div class="watchtower-chart-summary">
@@ -3644,7 +5576,7 @@ function renderWatchtowerChart() {
         </div>
       </div>
       <div class="watchtower-chart-scroll">
-        <table class="watchtower-level-table" style="min-width: ${Math.max(720, 190 + columnCount * 180)}px">
+        <table class="watchtower-level-table watchtower-level-table--${compact ? "compact" : "grouped"}" style="min-width: ${tableMinWidth}px">
           <thead>
             <tr>
               <th>Player</th>
@@ -3652,7 +5584,9 @@ function renderWatchtowerChart() {
             </tr>
           </thead>
           <tbody>
-            ${rows.map((row) => renderWatchtowerResultRow(row, columnCount, selectedBuilding)).join("")}
+            ${rows.map((row) => compact
+              ? renderCompactWatchtowerResultRow(row, columnCount, selectedBuilding)
+              : renderWatchtowerResultRow(row, columns, selectedBuilding)).join("")}
           </tbody>
         </table>
       </div>
@@ -3676,8 +5610,11 @@ function renderAttackScoreChart() {
     return;
   }
 
-  const columnCount = Math.max(1, ...rows.map((row) => row.targetCastles.length));
-  const castleHeaders = Array.from({ length: columnCount }, (_, index) => `<th>Castle ${index + 1}</th>`).join("");
+  const compact = isCompactCastleResultView();
+  const columns = compact ? null : getCastleTypeColumns(rows, "targetCastles");
+  const columnCount = compact ? getCompactCastleColumnCount(rows, "targetCastles") : 0;
+  const castleHeaders = compact ? renderCompactCastleHeaders(columnCount) : renderCastleTypeHeaders(columns);
+  const tableMinWidth = compact ? getCompactCastleTableMinWidth(columnCount) : getCastleTypeTableMinWidth(columns);
   const activeTarget = getActiveAttackScoreTarget(rows);
   elements.attackScoreChart.innerHTML = `
     <div class="watchtower-chart-shell attack-score-chart-shell">
@@ -3689,7 +5626,7 @@ function renderAttackScoreChart() {
         </div>
       </div>
       <div class="watchtower-chart-scroll">
-        <table class="watchtower-level-table" style="min-width: ${Math.max(720, 190 + columnCount * 180)}px">
+        <table class="watchtower-level-table watchtower-level-table--${compact ? "compact" : "grouped"}" style="min-width: ${tableMinWidth}px">
           <thead>
             <tr>
               <th>Player</th>
@@ -3697,7 +5634,9 @@ function renderAttackScoreChart() {
             </tr>
           </thead>
           <tbody>
-            ${rows.map((row) => renderAttackScoreResultRow(row, columnCount)).join("")}
+            ${rows.map((row) => compact
+              ? renderCompactAttackScoreResultRow(row, columnCount)
+              : renderAttackScoreResultRow(row, columns)).join("")}
           </tbody>
         </table>
       </div>
@@ -3722,9 +5661,1266 @@ function renderAttackScoreChart() {
   });
 }
 
-function renderWatchtowerResultRow(row, columnCount, selectedBuilding) {
-  const cells = Array.from({ length: columnCount }, (_, index) => {
-    return renderBuildingLevelCastleCell(row, row.castles[index], selectedBuilding);
+function renderDistanceChart() {
+  renderWatchtowerControls();
+  renderDistanceControls();
+  if (!elements.distanceChart) return;
+
+  if (!state.currentAlliance) {
+    elements.distanceChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>No alliance loaded.</strong>
+        <span>Load an alliance, then open Distances to fetch castle coordinates.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.distanceLoading) {
+    elements.distanceChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>Loading castle coordinates...</strong>
+        <span>Fetching one cartography snapshot for ${escapeHtml(state.currentAlliance.alliance_name || "this alliance")}.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.distanceLoadError) {
+    elements.distanceChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>Could not load distances.</strong>
+        <span>${escapeHtml(state.distanceLoadError)}</span>
+      </div>
+    `;
+    return;
+  }
+
+  const rows = state.distanceRows.filter((row) => Array.isArray(row.castles) && row.castles.length > 0);
+  if (rows.length === 0) {
+    const cacheKey = getDistanceAllianceCacheKey();
+    const hasLoadedDistanceRows = Boolean(cacheKey && state.distanceRowsByAlliance.has(cacheKey));
+    elements.distanceChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>${hasLoadedDistanceRows ? "No castle coordinates found." : "No distances yet."}</strong>
+        <span>${hasLoadedDistanceRows ? "The cartography snapshot did not return main, outpost, realm, capital, or metropolis castles for this alliance." : "Open this tab to fetch alliance castle coordinates, then choose an origin castle or coordinates."}</span>
+      </div>
+    `;
+    return;
+  }
+
+  const origin = getSelectedDistanceOrigin();
+  const compact = isCompactCastleResultView();
+  const columns = compact ? null : getCastleTypeColumns(rows, "castles");
+  const columnCount = compact ? getCompactCastleColumnCount(rows, "castles") : 0;
+  const castleHeaders = compact ? renderCompactCastleHeaders(columnCount) : renderCastleTypeHeaders(columns);
+  const tableMinWidth = compact ? getCompactCastleTableMinWidth(columnCount) : getCastleTypeTableMinWidth(columns);
+  const summaryLabel = origin
+    ? `${origin.castleName} to ${formatNumber(rows.length)} ${rows.length === 1 ? "player" : "players"}`
+    : `${formatNumber(rows.length)} alliance ${rows.length === 1 ? "player" : "players"} ready for distance checks`;
+
+  elements.distanceChart.innerHTML = `
+    <div class="watchtower-chart-shell distance-chart-shell">
+      <div class="watchtower-chart-summary">
+        <img src="${escapeHtml(origin?.castleIconUrl || "assets/attack-target.svg")}" alt="">
+        <div>
+          <span class="label">Castle distances</span>
+          <strong>${escapeHtml(summaryLabel)}</strong>
+        </div>
+      </div>
+      <div class="watchtower-chart-scroll">
+        <table class="watchtower-level-table watchtower-level-table--${compact ? "compact" : "grouped"}" style="min-width: ${tableMinWidth}px">
+          <thead>
+            <tr>
+              <th>Player</th>
+              ${castleHeaders}
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map((row, rowIndex) => compact
+              ? renderCompactDistanceResultRow(row, columnCount, origin, rowIndex)
+              : renderDistanceResultRow(row, columns, origin, rowIndex)).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderAllChart() {
+  renderWatchtowerControls();
+  renderBuildingLevelSelect();
+  renderDistanceControls();
+  syncAllFilterControls();
+  if (!elements.allChart) return;
+
+  const rows = getAllResultRows();
+  const hasAnySourceRows = state.distanceRows.length > 0 || state.watchtowerResults.size > 0;
+  if (!state.currentAlliance && !hasAnySourceRows) {
+    elements.allChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>No alliance loaded.</strong>
+        <span>Load an alliance or evaluate players to build the master view.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (state.distanceLoading && !hasAnySourceRows) {
+    elements.allChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>Loading master view...</strong>
+        <span>Fetching alliance castle coordinates for the distance layer.</span>
+      </div>
+    `;
+    return;
+  }
+
+  if (rows.length === 0) {
+    elements.allChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>No master data yet.</strong>
+        <span>Open All to load distances, or evaluate players to add building and attack score data.</span>
+      </div>
+    `;
+    updateAllSummary(0, 0);
+    return;
+  }
+
+  const selectedBuilding = getSelectedLevelBuilding();
+  const origin = getSelectedDistanceOrigin();
+  const compact = isCompactCastleResultView();
+  const columns = getAllCastleRegionColumns(rows, "castles");
+  const sortedRows = sortAllResultRows(rows, columns, selectedBuilding, origin);
+  const castleHeaders = renderAllCastleHeaders(columns);
+  const tableMinWidth = getAllRegionTableMinWidth(columns, compact);
+  const cardCount = sortedRows.reduce((sum, row) => sum + getRenderedCastlesForRow(row, "castles", columns).length, 0);
+  updateAllSummary(sortedRows.length, cardCount);
+
+  if (columns.length === 0) {
+    elements.allChart.innerHTML = `
+      <div class="watchtower-empty">
+        <img src="assets/attack-target.svg" alt="">
+        <strong>No selected castle columns.</strong>
+        <span>Select at least one region and castle group with data to show the master view columns.</span>
+      </div>
+    `;
+    return;
+  }
+
+  elements.allChart.innerHTML = `
+    <div class="watchtower-chart-shell all-chart-shell">
+      <div class="watchtower-chart-summary all-chart-tools">
+        <label class="all-player-search">
+          <span class="label">Player search</span>
+          <input type="search" data-all-player-search placeholder="Search players" value="${escapeHtml(state.allPlayerSearchQuery)}" autocomplete="off">
+        </label>
+      </div>
+      <div class="watchtower-chart-scroll">
+        <table class="watchtower-level-table watchtower-level-table--all watchtower-level-table--${compact ? "compact" : "grouped"}" style="min-width: ${tableMinWidth}px">
+          <thead>
+            <tr>
+              <th>${renderAllPlayerHeader()}</th>
+              ${castleHeaders}
+            </tr>
+          </thead>
+          <tbody>
+            ${sortedRows.map((row) => renderAllResultRow(row, columns, selectedBuilding, origin)).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  bindAllChartInteractions(elements.allChart);
+  refreshAllFilters();
+}
+
+function bindAllChartInteractions(root = elements.allChart) {
+  if (!root) return;
+
+  root.querySelectorAll("[data-attack-score-castle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const opened = toggleAttackScoreCastle(button.dataset.attackScoreCastle, { renderAttackScore: false });
+      renderAllChart();
+      if (opened) centerActiveAllAttackScoreBreakdown();
+    });
+  });
+  root.querySelectorAll("[data-all-sort]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setAllSort(button.dataset.allSort, button.dataset.allSortColumn || "");
+    });
+  });
+  const playerSearch = root.querySelector("[data-all-player-search]");
+  playerSearch?.addEventListener("input", () => {
+    state.allPlayerSearchQuery = playerSearch.value;
+    refreshAllFilters();
+  });
+  root.querySelectorAll("[data-all-player-scan]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void scanAllPlayer(button.dataset.allPlayerScan);
+    });
+  });
+  root.querySelectorAll("[data-public-order-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      togglePublicOrderDetails(button.dataset.publicOrderToggle);
+    });
+  });
+  root.querySelectorAll("[data-construction-item-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleConstructionItemDetails(button.dataset.constructionItemToggle);
+    });
+  });
+}
+
+function syncAllFilterControls() {
+  renderAllBuildingSelect();
+  syncAllRegionFilterControls();
+  syncAllCastleKindFilterControls();
+  syncAllRangeFilterControls();
+  if (elements.allHighlightNotCheating) {
+    elements.allHighlightNotCheating.checked = state.distanceHighlightNotCheating;
+  }
+  if (elements.allHighlightNotBirded) {
+    elements.allHighlightNotBirded.checked = state.distanceHighlightNotBirded;
+  }
+  if (elements.allHighlightScanned) {
+    elements.allHighlightScanned.checked = state.allHighlightScanned;
+  }
+}
+
+function syncAllRegionFilterControls() {
+  const selectedIds = getSelectedAllRegionIds();
+  const inputs = [...document.querySelectorAll("[data-all-region-filter]")];
+  inputs.forEach((input) => {
+    input.checked = selectedIds.has(Number(input.value));
+  });
+  if (!elements.allRegionFilterSummary) return;
+  if (selectedIds.size === 0) {
+    elements.allRegionFilterSummary.textContent = "No regions selected";
+    return;
+  }
+  if (selectedIds.size === ALL_KINGDOM_FILTER_OPTIONS.length) {
+    elements.allRegionFilterSummary.textContent = "All regions shown";
+    return;
+  }
+  const labels = ALL_KINGDOM_FILTER_OPTIONS
+    .filter((option) => selectedIds.has(option.id))
+    .map((option) => option.label);
+  elements.allRegionFilterSummary.textContent = `${labels.join(", ")} shown`;
+}
+
+function syncAllCastleKindFilterControls() {
+  const selectedIds = getSelectedAllCastleKindIds();
+  const inputs = [...document.querySelectorAll("[data-all-castle-kind-filter]")];
+  inputs.forEach((input) => {
+    input.checked = selectedIds.has(String(input.value || ""));
+  });
+  if (!elements.allCastleKindFilterSummary) return;
+  if (selectedIds.size === 0) {
+    elements.allCastleKindFilterSummary.textContent = "No groups selected";
+    return;
+  }
+  if (selectedIds.size === ALL_CASTLE_KIND_FILTER_OPTIONS.length) {
+    elements.allCastleKindFilterSummary.textContent = "All groups shown";
+    return;
+  }
+  const labels = ALL_CASTLE_KIND_FILTER_OPTIONS
+    .filter((option) => selectedIds.has(option.id))
+    .map((option) => option.label);
+  elements.allCastleKindFilterSummary.textContent = `${labels.join(", ")} shown`;
+}
+
+function syncAllRangeFilterControls() {
+  Object.keys(ALL_RANGE_FILTER_DEFS).forEach(syncAllRangeFilterControl);
+}
+
+function syncAllRangeFilterControl(id) {
+  const def = getAllRangeFilterDef(id);
+  const range = getAllRangeFilter(id);
+  const ruleEl = document.querySelector(`[data-all-range-rule="${id}"]`);
+  if (!def || !range || !ruleEl) return;
+
+  const normalized = normalizeAllRangeFilter(id, range);
+  state.allRangeFilters[id] = normalized;
+  const minSliderValue = def.valueToSlider(normalized.min, "min");
+  const maxSliderValue = def.valueToSlider(normalized.max, "max");
+  const sliderSpan = Math.max(1, def.sliderMax - def.sliderMin);
+  const startRatio = clampNumber((minSliderValue - def.sliderMin) / sliderSpan, 0, 1);
+  const endRatio = clampNumber((maxSliderValue - def.sliderMin) / sliderSpan, 0, 1);
+  const start = startRatio * 100;
+  const end = endRatio * 100;
+  const startOffsetPx = RANGE_FILTER_THUMB_RADIUS_PX - RANGE_FILTER_THUMB_SIZE_PX * startRatio;
+  const endInsetRatio = 1 - endRatio;
+  const endInset = endInsetRatio * 100;
+  const endOffsetPx = RANGE_FILTER_THUMB_RADIUS_PX - RANGE_FILTER_THUMB_SIZE_PX * endInsetRatio;
+
+  ruleEl.classList.toggle("is-active", normalized.enabled);
+  ruleEl.style.setProperty("--range-start", `${clampNumber(start, 0, 100)}%`);
+  ruleEl.style.setProperty("--range-end", `${clampNumber(end, 0, 100)}%`);
+  ruleEl.style.setProperty("--range-fill-left", `calc(${start.toFixed(4)}% + ${startOffsetPx.toFixed(4)}px)`);
+  ruleEl.style.setProperty("--range-fill-right", `calc(${endInset.toFixed(4)}% + ${endOffsetPx.toFixed(4)}px)`);
+
+  const enabledInput = ruleEl.querySelector("[data-all-range-enabled]");
+  if (enabledInput) enabledInput.checked = normalized.enabled;
+  const stateLabel = ruleEl.querySelector("[data-all-range-state]");
+  if (stateLabel) stateLabel.textContent = normalized.enabled ? "On" : "Off";
+
+  ruleEl.querySelectorAll("[data-all-range-slider]").forEach((slider) => {
+    const bound = slider.dataset.allRangeBound === "max" ? "max" : "min";
+    slider.min = String(def.sliderMin);
+    slider.max = String(def.sliderMax);
+    slider.step = String(def.sliderStep);
+    slider.value = String(bound === "max" ? maxSliderValue : minSliderValue);
+  });
+
+  ruleEl.querySelectorAll("[data-all-range-input]").forEach((input) => {
+    if (document.activeElement === input) return;
+    const bound = input.dataset.allRangeBound === "max" ? "max" : "min";
+    input.value = def.formatInput(normalized[bound]);
+  });
+}
+
+function setAllSort(metric, columnKey = "") {
+  const normalizedMetric = String(metric || "");
+  if (!["name", "might", "scanned", "attack", "building", "distance"].includes(normalizedMetric)) return;
+  const normalizedColumnKey = String(columnKey || "");
+  const sameSort = state.allSort?.metric === normalizedMetric && String(state.allSort?.columnKey || "") === normalizedColumnKey;
+  state.allSort = {
+    metric: normalizedMetric,
+    columnKey: normalizedColumnKey,
+    direction: sameSort ? getOppositeAllSortDirection(state.allSort.direction) : getDefaultAllSortDirection(normalizedMetric),
+  };
+  renderAllChart();
+}
+
+function getDefaultAllSortDirection(metric) {
+  return metric === "name" ? "asc" : "desc";
+}
+
+function getOppositeAllSortDirection(direction) {
+  return direction === "asc" ? "desc" : "asc";
+}
+
+function updateAllSummary(rowCount, cardCount, highlightedCardCount = null) {
+  if (!elements.allSummary) return;
+  const selectedBuilding = getSelectedLevelBuilding();
+  const rules = [];
+  const distanceRange = getActiveAllRangeFilter("distance");
+  const attackRange = getActiveAllRangeFilter("attack");
+  const buildingRange = getActiveAllRangeFilter("building");
+  const mightRange = getActiveAllRangeFilter("might");
+  const lootRange = getActiveAllRangeFilter("loot");
+  if (distanceRange) rules.push(`player distance ${formatAllRangeRuleValue("distance", distanceRange)}`);
+  if (attackRange) rules.push(`attack score ${formatAllRangeRuleValue("attack", attackRange)}`);
+  if (buildingRange) rules.push(`building level ${formatAllRangeRuleValue("building", buildingRange)}`);
+  if (mightRange) rules.push(`might points ${formatAllRangeRuleValue("might", mightRange)}`);
+  if (lootRange) rules.push(`last time looted ${formatAllRangeRuleValue("loot", lootRange)}`);
+  if (state.distanceHighlightNotCheating) rules.push("players not cheating");
+  if (state.distanceHighlightNotBirded) rules.push("players not birded");
+  if (state.allHighlightScanned) rules.push("players scanned");
+  if (state.allPlayerSearchQuery.trim()) rules.push(`player contains "${state.allPlayerSearchQuery.trim()}"`);
+  const ruleText = rules.length > 0 ? ` Filters: ${rules.join(" and ")}.` : "";
+  if (hasActiveAllFilters() && Number.isFinite(highlightedCardCount)) {
+    elements.allSummary.textContent = `${formatNumber(highlightedCardCount)} highlighted of ${formatNumber(cardCount)} ${cardCount === 1 ? "castle" : "castles"} for ${formatNumber(rowCount)} ${rowCount === 1 ? "player" : "players"}.${ruleText}`;
+    return;
+  }
+  if (rowCount > 0) {
+    elements.allSummary.textContent = `${formatNumber(cardCount)} ${cardCount === 1 ? "castle" : "castles"} for ${formatNumber(rowCount)} ${rowCount === 1 ? "player" : "players"}.${ruleText}`;
+  } else if (hasActiveAllFilters() && (state.distanceRows.length > 0 || state.watchtowerResults.size > 0)) {
+    elements.allSummary.textContent = `0 castles highlighted by the active rules.${ruleText}`;
+  } else {
+    elements.allSummary.textContent = `Combines player distance, building level, and attack score data when available.${ruleText}`;
+  }
+}
+
+function hasActiveAllFilters() {
+  return Object.keys(ALL_RANGE_FILTER_DEFS).some((id) => Boolean(getActiveAllRangeFilter(id)))
+    || state.distanceHighlightNotCheating
+    || state.distanceHighlightNotBirded
+    || state.allHighlightScanned;
+}
+
+function formatAllRangeRuleValue(id, range) {
+  const def = getAllRangeFilterDef(id);
+  if (!def || !range) return "";
+  const minLabel = def.format(range.min);
+  const maxLabel = def.format(range.max);
+  if (minLabel === maxLabel) return `= ${minLabel}`;
+  return `between ${minLabel} and ${maxLabel}`;
+}
+
+function refreshAllFilters() {
+  if (!elements.allChart) return;
+  syncAllFilterControls();
+  const rowEls = [...elements.allChart.querySelectorAll("[data-all-row]")];
+  if (rowEls.length === 0) {
+    updateAllSummary(0, 0);
+    return;
+  }
+
+  const hasActiveFilters = hasActiveAllFilters();
+  let totalRows = 0;
+  let totalCards = 0;
+  let highlightedCards = 0;
+
+  rowEls.forEach((rowEl) => {
+    const rowMatchesSearch = allRowMatchesPlayerSearch(rowEl);
+    rowEl.hidden = !rowMatchesSearch;
+    const breakdownRow = findAllBreakdownRowElement(rowEl.dataset.allRow);
+    if (breakdownRow) breakdownRow.hidden = !rowMatchesSearch;
+    if (!rowMatchesSearch) return;
+
+    let rowCardCount = 0;
+    rowEl.querySelectorAll("[data-all-card]").forEach((cardEl) => {
+      rowCardCount += 1;
+      totalCards += 1;
+      const matches = allCardElementMatchesFilters(cardEl);
+      cardEl.classList.toggle("watchtower-castle-cell--distance-highlight", hasActiveFilters && matches);
+      cardEl.classList.remove("is-filtered-out");
+      if (hasActiveFilters && matches) highlightedCards += 1;
+    });
+    rowEl.classList.remove("is-filtered-out");
+    if (rowCardCount > 0) totalRows += 1;
+  });
+
+  updateAllSummary(totalRows, totalCards, hasActiveFilters ? highlightedCards : null);
+}
+
+function allRowMatchesPlayerSearch(rowEl) {
+  const query = normalizeSearchText(state.allPlayerSearchQuery);
+  if (!query) return true;
+  return normalizeSearchText(rowEl?.dataset?.allPlayerName).includes(query);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function refreshAllPlayerScanControls() {
+  if (!elements.allChart) return;
+  elements.allChart.querySelectorAll("[data-all-player-scan]").forEach((button) => {
+    const playerKey = String(button.dataset.allPlayerScan || "");
+    const row = getAllResultRows().find((item) => getAllRowDomKey(item) === playerKey);
+    const player = getRosterPlayerForAllRow(row) || state.players.find((item) => getPlayerKey(item) === playerKey);
+    const playerName = row?.playerName || player?.player_name || "player";
+    const loading = state.watchtowerLoadingPlayerIds.has(playerKey);
+    const scanned = Boolean(row?.watchtowerRow || state.watchtowerResults.has(playerKey));
+    const label = loading
+      ? `Scanning ${playerName}`
+      : player
+        ? scanned
+          ? `${playerName} already evaluated; rescan player`
+          : `Scan ${playerName}`
+        : `Cannot scan ${playerName}; player is not in the roster`;
+    button.classList.toggle("is-loading", loading);
+    button.classList.toggle("is-scanned", scanned);
+    button.disabled = !player || loading || state.watchtowerScanActive;
+    button.title = label;
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", "false");
+  });
+}
+
+function refreshAllRowsForPlayers(playerKeys) {
+  if (!elements.allChart || state.activeRosterTab !== "all") return;
+  const rows = getAllResultRows();
+  const columns = getAllCastleRegionColumns(rows, "castles");
+  const currentColumnCount = getCurrentAllColumnCount();
+
+  if (currentColumnCount !== null && currentColumnCount !== columns.length) {
+    renderAllChart();
+    return;
+  }
+
+  const selectedBuilding = getSelectedLevelBuilding();
+  const origin = getSelectedDistanceOrigin();
+  let replacedAny = false;
+  (Array.isArray(playerKeys) ? playerKeys : []).forEach((playerKey) => {
+    const key = String(playerKey || "");
+    const row = rows.find((item) => getAllRowDomKey(item) === key);
+    const rowEl = findAllRowElement(key);
+    if (!row || !rowEl) return;
+    findAllBreakdownRowElement(key)?.remove();
+    rowEl.outerHTML = renderAllResultRow(row, columns, selectedBuilding, origin);
+    const nextRowEl = findAllRowElement(key);
+    bindAllChartInteractions(nextRowEl);
+    bindAllChartInteractions(findAllBreakdownRowElement(key));
+    replacedAny = true;
+  });
+
+  if (replacedAny) {
+    refreshAllFilters();
+    refreshAllPlayerScanControls();
+  } else {
+    refreshAllPlayerScanControls();
+  }
+}
+
+function getCurrentAllColumnCount() {
+  const headerRow = elements.allChart?.querySelector(".watchtower-level-table--all thead tr");
+  if (!headerRow) return null;
+  return Math.max(0, headerRow.children.length - 1);
+}
+
+function findAllRowElement(playerKey) {
+  const key = String(playerKey || "");
+  return [...(elements.allChart?.querySelectorAll("[data-all-row]") || [])]
+    .find((rowEl) => rowEl.dataset.allRow === key) || null;
+}
+
+function findAllBreakdownRowElement(playerKey) {
+  const key = String(playerKey || "");
+  return [...(elements.allChart?.querySelectorAll("[data-all-breakdown-row]") || [])]
+    .find((rowEl) => rowEl.dataset.allBreakdownRow === key) || null;
+}
+
+function centerActiveAllAttackScoreBreakdown() {
+  requestAnimationFrame(() => {
+    const breakdown = elements.allChart?.querySelector("[data-all-breakdown-row] .attack-score-breakdown");
+    breakdown?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+  });
+}
+
+function allCardElementMatchesFilters(cardEl) {
+  if (!cardEl) return false;
+  const distanceRange = getActiveAllRangeFilter("distance");
+  const attackRange = getActiveAllRangeFilter("attack");
+  const buildingRange = getActiveAllRangeFilter("building");
+  const mightRange = getActiveAllRangeFilter("might");
+  const lootRange = getActiveAllRangeFilter("loot");
+  if (distanceRange && !isValueInRange(getDataNumber(cardEl, "distance"), distanceRange)) {
+    return false;
+  }
+  if (attackRange && !isValueInRange(getDataNumber(cardEl, "attackScore"), attackRange)) {
+    return false;
+  }
+  if (buildingRange && !isValueInRange(getDataNumber(cardEl, "buildingLevel"), buildingRange)) {
+    return false;
+  }
+  if (mightRange && !isValueInRange(getDataNumber(cardEl, "might"), mightRange)) {
+    return false;
+  }
+  if (lootRange && !isValueInRange(getDataNumber(cardEl, "lootDays"), lootRange)) {
+    return false;
+  }
+  if (state.distanceHighlightNotCheating && cardEl.dataset.notCheating !== "true") return false;
+  if (state.distanceHighlightNotBirded && cardEl.dataset.notBirded !== "true") return false;
+  if (state.allHighlightScanned && cardEl.dataset.scanned !== "true") return false;
+  return true;
+}
+
+function shouldGlowAllCardElement(cardEl) {
+  return hasActiveAllFilters() && allCardElementMatchesFilters(cardEl);
+}
+
+function getDataNumber(element, key) {
+  const raw = element?.dataset?.[key];
+  if (raw === null || raw === undefined || raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+function isValueAtMost(value, threshold) {
+  return Number.isFinite(Number(value)) && Number.isFinite(Number(threshold)) && Number(value) <= Number(threshold);
+}
+
+function isValueAtLeast(value, threshold) {
+  return Number.isFinite(Number(value)) && Number.isFinite(Number(threshold)) && Number(value) >= Number(threshold);
+}
+
+function isValueInRange(value, range) {
+  const number = Number(value);
+  const min = Number(range?.min);
+  const max = Number(range?.max);
+  return Number.isFinite(number)
+    && Number.isFinite(min)
+    && (Number.isFinite(max) || max === Number.POSITIVE_INFINITY)
+    && number >= min
+    && number <= max;
+}
+
+function getAllResultRows() {
+  const rowsByKey = new Map();
+  const mergeRow = (row, source) => {
+    if (!row) return;
+    const key = getAllResultRowKey(row);
+    if (!key) return;
+    const existing = rowsByKey.get(key) || {
+      playerKey: String(row.playerKey || key),
+      playerName: String(row.playerName || row.name || "Unknown player"),
+      rank: row.rank,
+      mightCurrent: Math.max(0, Math.trunc(parseNumeric(row.mightCurrent ?? row.might_current))),
+      castles: [],
+      distanceRow: null,
+      watchtowerRow: null,
+    };
+    existing.playerKey = existing.playerKey || String(row.playerKey || key);
+    existing.playerName = existing.playerName || String(row.playerName || row.name || "Unknown player");
+    existing.rank = existing.rank ?? row.rank;
+    existing.mightCurrent = existing.mightCurrent || Math.max(0, Math.trunc(parseNumeric(row.mightCurrent ?? row.might_current)));
+    if (source === "distance") existing.distanceRow = row;
+    if (source === "watchtower") existing.watchtowerRow = row;
+    existing.castles = dedupeAllCastles([
+      ...existing.castles,
+      ...(Array.isArray(row.castles) ? row.castles : []),
+      ...(Array.isArray(row.targetCastles) ? row.targetCastles : []),
+    ]);
+    rowsByKey.set(key, existing);
+  };
+
+  state.distanceRows.forEach((row) => mergeRow(row, "distance"));
+  state.watchtowerResults.forEach((row) => mergeRow(row, "watchtower"));
+
+  return [...rowsByKey.values()]
+    .map((row) => ({ ...row, castles: row.castles.sort(sortScanResultCastles) }))
+    .sort(sortDistanceRows);
+}
+
+function sortAllResultRows(rows, columns, selectedBuilding, origin) {
+  const sort = state.allSort;
+  if (!sort?.metric) return rows;
+  const direction = sort.direction === "asc" ? "asc" : "desc";
+  return rows.slice().sort((a, b) => {
+    if (sort.metric === "name") {
+      const nameSort = String(a.playerName || "").localeCompare(String(b.playerName || ""), undefined, { sensitivity: "base" });
+      return direction === "asc" ? nameSort : -nameSort;
+    }
+    if (sort.metric === "might") {
+      const mightSort = compareNullableNumbers(Number(a.mightCurrent || 0), Number(b.mightCurrent || 0), direction);
+      return mightSort || sortDistanceRows(a, b);
+    }
+    if (sort.metric === "scanned") {
+      const scannedSort = compareNullableNumbers(a.watchtowerRow ? 1 : 0, b.watchtowerRow ? 1 : 0, direction);
+      return scannedSort || sortDistanceRows(a, b);
+    }
+    const valueA = getAllColumnSortValue(a, columns, sort, selectedBuilding, origin);
+    const valueB = getAllColumnSortValue(b, columns, sort, selectedBuilding, origin);
+    const numericSort = compareNullableNumbers(valueA, valueB, direction);
+    return numericSort || sortDistanceRows(a, b);
+  });
+}
+
+function getAllColumnSortValue(row, columns, sort, selectedBuilding, origin) {
+  const column = (Array.isArray(columns) ? columns : []).find((entry) => entry.key === sort.columnKey);
+  if (!column) return null;
+  const castle = getCastlesForColumn(row, "castles", column)[0];
+  if (!castle) return null;
+  if (sort.metric === "attack") {
+    const target = getAllAttackTargetForCastle(row, castle);
+    return target && !target.error ? Number(target.score) : null;
+  }
+  if (sort.metric === "building") {
+    const buildingRow = getAllBuildingRowForCastle(row, castle, selectedBuilding);
+    return Number(buildingRow?.maxLevel || 0) > 0 ? Number(buildingRow.maxLevel) : null;
+  }
+  if (sort.metric === "distance") {
+    const targetOrigin = getDistanceOriginForTarget(castle, origin);
+    return getComparableDisplayedDistance(getCastleDistance(targetOrigin, castle));
+  }
+  return null;
+}
+
+function compareNullableNumbers(a, b, direction = "desc") {
+  const valueA = Number(a);
+  const valueB = Number(b);
+  const hasA = Number.isFinite(valueA);
+  const hasB = Number.isFinite(valueB);
+  if (hasA && hasB && valueA !== valueB) return direction === "asc" ? valueA - valueB : valueB - valueA;
+  if (hasA !== hasB) return hasA ? -1 : 1;
+  return 0;
+}
+
+function getAllResultRowKey(row) {
+  const key = String(row?.playerKey || "").trim();
+  if (key) return key.toLowerCase();
+  const name = String(row?.playerName || row?.name || "").trim();
+  return name ? `name:${name.toLowerCase()}` : "";
+}
+
+function dedupeAllCastles(castles) {
+  const seen = new Set();
+  const indexByKey = new Map();
+  const result = [];
+  (Array.isArray(castles) ? castles : []).forEach((castle) => {
+    if (!castle) return;
+    const key = getAllCastleIdentity(castle);
+    if (seen.has(key)) {
+      const index = indexByKey.get(key);
+      if (Number.isInteger(index)) {
+        result[index] = mergeAllCastleCandidate(result[index], castle);
+      }
+      return;
+    }
+    seen.add(key);
+    indexByKey.set(key, result.length);
+    result.push(castle);
+  });
+  return result;
+}
+
+function getAllCastleIdentity(castle) {
+  const x = parseCoordinate(castle?.positionX);
+  const y = parseCoordinate(castle?.positionY);
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    return `pos:${Number(castle?.kingdomId || 0)}:${Number(castle?.castleType || 0)}:${x}:${y}`;
+  }
+  const castleId = String(castle?.castleId || castle?.id || "").trim();
+  if (castleId) return `id:${castleId}`;
+  return `name:${Number(castle?.kingdomId || 0)}:${Number(castle?.castleType || 0)}:${String(castle?.castleName || "").toLowerCase()}`;
+}
+
+function mergeAllCastleCandidate(baseCastle, candidateCastle) {
+  const merged = { ...baseCastle };
+  const baseName = String(baseCastle?.castleName || "").trim();
+  const candidateName = String(candidateCastle?.castleName || "").trim();
+  if (candidateName && (!baseName || isGenericCastleDisplayName(baseCastle) || candidateName.length > baseName.length)) {
+    merged.castleName = candidateName;
+  }
+  ["key", "castleId", "id", "castleIconUrl", "displayIndex"].forEach((field) => {
+    const current = String(merged[field] || "").trim();
+    const next = candidateCastle?.[field];
+    if (next !== null && next !== undefined && (!current || current.startsWith("cartography:"))) {
+      merged[field] = next;
+    }
+  });
+  return merged;
+}
+
+function isGenericCastleDisplayName(castle) {
+  const name = String(castle?.castleName || "").trim().toLowerCase();
+  if (!name) return true;
+  if (["main castle", "realm castle", "capital", "metropolis"].includes(name)) return true;
+  return /^outpost\s+\d+$/i.test(name);
+}
+
+function filterAllResultRows(rows, selectedBuilding) {
+  const origin = getSelectedDistanceOrigin();
+  return rows.map((row) => {
+    const castles = row.castles.filter((castle) => allCastleMatchesFilters(row, castle, selectedBuilding, origin));
+    return { ...row, castles };
+  }).filter((row) => row.castles.length > 0);
+}
+
+function allCastleMatchesFilters(row, castle, selectedBuilding, selectedOrigin = getSelectedDistanceOrigin()) {
+  const target = getAllAttackTargetForCastle(row, castle);
+  const buildingRow = selectedBuilding ? getAllBuildingRowForCastle(row, castle, selectedBuilding) : null;
+  const origin = getDistanceOriginForTarget(castle, selectedOrigin);
+  const distance = getComparableDisplayedDistance(getCastleDistance(origin, castle));
+  const meta = getDistanceRowFilterMeta(row);
+  const distanceRange = getActiveAllRangeFilter("distance");
+  const attackRange = getActiveAllRangeFilter("attack");
+  const buildingRange = getActiveAllRangeFilter("building");
+  const mightRange = getActiveAllRangeFilter("might");
+  const lootRange = getActiveAllRangeFilter("loot");
+  if (distanceRange && !isValueInRange(distance, distanceRange)) {
+    return false;
+  }
+  if (attackRange && (!target || target.error || !isValueInRange(Number(target.score), attackRange))) {
+    return false;
+  }
+  if (buildingRange && !isValueInRange(Number(buildingRow?.maxLevel || 0), buildingRange)) {
+    return false;
+  }
+  if (mightRange && !isValueInRange(meta.playerMightMillions, mightRange)) {
+    return false;
+  }
+  if (lootRange && !isValueInRange(meta.lootAgeDays, lootRange)) {
+    return false;
+  }
+  if (state.allHighlightScanned && !row.watchtowerRow) {
+    return false;
+  }
+  return (!state.distanceHighlightNotCheating || meta.matchesNotCheating)
+    && (!state.distanceHighlightNotBirded || meta.matchesNotBirded);
+}
+
+function renderDistanceControls() {
+  if (!elements.homePlayerInput && !elements.allHomePlayerInput) return;
+  const isCoordinateMode = state.distanceOriginMode === "coordinates";
+
+  document.querySelectorAll("[data-distance-origin-mode]").forEach((button) => {
+    const active = button.dataset.distanceOriginMode === state.distanceOriginMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", active ? "true" : "false");
+  });
+  document.querySelectorAll("[data-distance-origin-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.distanceOriginPanel !== state.distanceOriginMode;
+  });
+  document.querySelectorAll("[data-all-distance-origin-panel]").forEach((panel) => {
+    panel.hidden = panel.dataset.allDistanceOriginPanel !== state.distanceOriginMode;
+  });
+
+  if (elements.homePlayerInput && document.activeElement !== elements.homePlayerInput) {
+    elements.homePlayerInput.value = state.homePlayerName;
+  }
+  if (elements.allHomePlayerInput && document.activeElement !== elements.allHomePlayerInput) {
+    elements.allHomePlayerInput.value = state.homePlayerName;
+  }
+
+  renderHomePlayerMenu();
+
+  if (elements.loadHomeCastles) {
+    elements.loadHomeCastles.disabled = state.homeCastleLoading || !state.homePlayerName.trim();
+    elements.loadHomeCastles.textContent = state.homeCastleLoading ? "Loading..." : "Load castles";
+  }
+  if (elements.allLoadHomeCastles) {
+    elements.allLoadHomeCastles.disabled = state.homeCastleLoading || !state.homePlayerName.trim();
+    elements.allLoadHomeCastles.textContent = state.homeCastleLoading ? "Loading..." : "Load";
+  }
+
+  const options = state.homeCastles.length > 0
+    ? state.homeCastles.map((castle) => {
+      const selected = castle.key === state.selectedHomeCastleKey ? " selected" : "";
+      const label = `${castle.castleName} - ${getKingdomName(castle.kingdomId)} (${formatCoordinate(castle.positionX)}, ${formatCoordinate(castle.positionY)})`;
+      return `<option value="${escapeHtml(castle.key)}"${selected}>${escapeHtml(label)}</option>`;
+    }).join("")
+    : `<option value="">${state.homeCastleLoading ? "Loading castles..." : "Load castles first"}</option>`;
+  if (elements.homeCastleSelect) {
+    elements.homeCastleSelect.innerHTML = options;
+    elements.homeCastleSelect.disabled = state.homeCastleLoading || state.homeCastles.length === 0;
+  }
+  if (elements.allHomeCastleSelect) {
+    elements.allHomeCastleSelect.innerHTML = options;
+    elements.allHomeCastleSelect.disabled = state.homeCastleLoading || state.homeCastles.length === 0;
+  }
+
+  if (elements.distanceRegionSelect) {
+    elements.distanceRegionSelect.value = String(state.distanceCoordinates.kingdomId || 0);
+  }
+  if (elements.allDistanceRegionSelect) {
+    elements.allDistanceRegionSelect.value = String(state.distanceCoordinates.kingdomId || 0);
+  }
+  if (document.activeElement !== elements.distanceXInput && elements.distanceXInput) {
+    elements.distanceXInput.value = state.distanceCoordinates.positionX ?? "";
+  }
+  if (document.activeElement !== elements.distanceYInput && elements.distanceYInput) {
+    elements.distanceYInput.value = state.distanceCoordinates.positionY ?? "";
+  }
+  if (document.activeElement !== elements.allDistanceXInput && elements.allDistanceXInput) {
+    elements.allDistanceXInput.value = state.distanceCoordinates.positionX ?? "";
+  }
+  if (document.activeElement !== elements.allDistanceYInput && elements.allDistanceYInput) {
+    elements.allDistanceYInput.value = state.distanceCoordinates.positionY ?? "";
+  }
+  syncDistanceHighlightSliders();
+  syncDistanceHighlightToggles();
+
+  const origin = getSelectedDistanceOrigin();
+  const homeCastle = getSelectedHomeCastle();
+  if (elements.homeDistanceSummary) {
+    if (state.homeCastleLoading) {
+      elements.homeDistanceSummary.textContent = `Loading castles for ${state.homePlayerName}...`;
+    } else if (isCoordinateMode && origin) {
+      elements.homeDistanceSummary.textContent = `${getKingdomName(origin.kingdomId)} coordinates at ${formatCoordinates(origin)}.`;
+    } else if (isCoordinateMode) {
+      elements.homeDistanceSummary.textContent = "Enter X/Y coordinates and region.";
+    } else if (homeCastle) {
+      elements.homeDistanceSummary.textContent = `${homeCastle.castleName} in ${getKingdomName(homeCastle.kingdomId)} at ${formatCoordinates(homeCastle)}. Regional cards use matching main castles.`;
+    } else if (state.homePlayerName) {
+      elements.homeDistanceSummary.textContent = "Load your castles to calculate distances.";
+    } else {
+      elements.homeDistanceSummary.textContent = "Type or select your player, then load castles.";
+    }
+  }
+}
+
+function syncDistanceHighlightSliders() {
+  syncSliderControl(
+    elements.distanceHighlightInput,
+    elements.distanceHighlightValue,
+    formatDistanceRuleValue,
+    getDistanceSliderValue(state.distanceHighlightThreshold),
+  );
+  syncSliderControl(
+    elements.distanceMightInput,
+    elements.distanceMightValue,
+    formatMightRuleValue,
+    getMightSliderValue(state.distanceHighlightMightMillions),
+  );
+  syncSliderControl(
+    elements.distanceLootDaysInput,
+    elements.distanceLootDaysValue,
+    formatLootAgeRuleValue,
+    getLootDaysSliderValue(state.distanceHighlightLootDays),
+  );
+  syncAllFilterControls();
+}
+
+function syncDistanceHighlightToggles() {
+  if (elements.distanceHighlightNotCheating) {
+    elements.distanceHighlightNotCheating.checked = state.distanceHighlightNotCheating;
+  }
+  if (elements.distanceHighlightNotBirded) {
+    elements.distanceHighlightNotBirded.checked = state.distanceHighlightNotBirded;
+  }
+  if (elements.allHighlightNotCheating) {
+    elements.allHighlightNotCheating.checked = state.distanceHighlightNotCheating;
+  }
+  if (elements.allHighlightNotBirded) {
+    elements.allHighlightNotBirded.checked = state.distanceHighlightNotBirded;
+  }
+}
+
+function syncSliderControl(input, output, formatter, sliderValue) {
+  if (!input) return;
+  input.value = String(sliderValue || 0);
+  updateSliderControl(input, output, formatter);
+}
+
+function refreshDistanceHighlightFilters() {
+  refreshDistanceHighlightControlDisplays();
+  refreshDistanceCardHighlights();
+  refreshAllFilters();
+}
+
+function refreshDistanceHighlightControlDisplays() {
+  updateSliderControl(
+    elements.distanceHighlightInput,
+    elements.distanceHighlightValue,
+    formatDistanceRuleValue,
+  );
+  updateSliderControl(
+    elements.distanceMightInput,
+    elements.distanceMightValue,
+    formatMightRuleValue,
+  );
+  updateSliderControl(
+    elements.distanceLootDaysInput,
+    elements.distanceLootDaysValue,
+    formatLootAgeRuleValue,
+  );
+  syncAllFilterControls();
+  syncDistanceHighlightToggles();
+}
+
+function updateSliderControl(input, output, formatter) {
+  if (!input) return;
+  const min = Number(input.min || 0);
+  const max = Number(input.max || 100);
+  const value = Number(input.value || 0);
+  const fill = max > min ? ((value - min) / (max - min)) * 100 : 0;
+  input.style.setProperty("--slider-fill", `${clampNumber(fill, 0, 100)}%`);
+  input.closest(".distance-rule")?.classList.toggle("is-active", value > min);
+  if (output) output.textContent = formatter(value > min ? getSliderSemanticValue(input, value) : null);
+}
+
+function getSliderSemanticValue(input, value) {
+  const id = String(input?.id || "");
+  if (id.includes("might")) return getMightMillionsFromSlider(value);
+  if (id.includes("loot-days")) return getLootDaysFromSlider(value);
+  if (id.includes("attack-score")) return getAttackScoreFromSlider(value);
+  if (id.includes("building-level")) return getBuildingLevelFromSlider(value);
+  return getDistanceThresholdFromSlider(value);
+}
+
+function refreshDistanceCardHighlights() {
+  if (!elements.distanceChart) return;
+  const rowEls = [...elements.distanceChart.querySelectorAll("[data-distance-row-index]")];
+  if (rowEls.length === 0) return;
+
+  const rows = state.distanceRows.filter((row) => Array.isArray(row.castles) && row.castles.length > 0);
+  if (rowEls.length !== rows.length) {
+    renderDistanceChart();
+    return;
+  }
+
+  const origin = getSelectedDistanceOrigin();
+  const columns = isCompactCastleResultView() ? null : getCastleTypeColumns(rows, "castles");
+  rows.forEach((row, rowIndex) => {
+    const rowEl = rowEls[rowIndex];
+    if (!rowEl) return;
+    const rowStatus = getDistanceRowStatus(row);
+    const playerCell = rowEl.querySelector("[data-distance-player-cell]");
+    if (playerCell) {
+      if (rowStatus.title) {
+        playerCell.setAttribute("title", rowStatus.title);
+      } else {
+        playerCell.removeAttribute("title");
+      }
+    }
+
+    const cardEls = [...rowEl.querySelectorAll("[data-distance-castle-card]")];
+    getRenderedCastlesForRow(row, "castles", columns).forEach((castle, cardIndex) => {
+      const cardEl = cardEls[cardIndex];
+      if (!cardEl) return;
+      const targetOrigin = getDistanceOriginForTarget(castle, origin);
+      const distance = getCastleDistance(targetOrigin, castle);
+      cardEl.classList.toggle("watchtower-castle-cell--distance-highlight", shouldGlowDistanceCastle(distance, rowStatus));
+    });
+  });
+}
+
+function getCompactCastleColumnCount(rows, listKey) {
+  const maxCastles = Math.max(0, ...(Array.isArray(rows) ? rows : []).map((row) => {
+    return Array.isArray(row?.[listKey]) ? row[listKey].length : 0;
+  }));
+  return Math.max(1, maxCastles);
+}
+
+function renderCompactCastleHeaders(columnCount) {
+  return Array.from({ length: columnCount }, (_, index) => `<th>Castle ${index + 1}</th>`).join("");
+}
+
+function getCompactCastleTableMinWidth(columnCount) {
+  return Math.max(720, 190 + Math.max(1, columnCount) * 180);
+}
+
+function getAllCompactCastleTableMinWidth(columnCount) {
+  return Math.max(900, ALL_PLAYER_COLUMN_MIN_WIDTH + Math.max(1, columnCount) * ALL_CASTLE_COLUMN_MIN_WIDTH);
+}
+
+function getAllCastleTypeTableMinWidth(columns) {
+  return Math.max(900, ALL_PLAYER_COLUMN_MIN_WIDTH + Math.max(1, columns.length) * ALL_CASTLE_COLUMN_MIN_WIDTH);
+}
+
+function getAllRegionTableMinWidth(columns, compact = false) {
+  return Math.max(compact ? 900 : 960, ALL_PLAYER_COLUMN_MIN_WIDTH + Math.max(1, columns.length) * ALL_CASTLE_COLUMN_MIN_WIDTH);
+}
+
+function getCompactResultCastles(row, listKey) {
+  return (Array.isArray(row?.[listKey]) ? row[listKey] : []).slice().sort(sortScanResultCastles);
+}
+
+function getRenderedCastlesForRow(row, listKey, columns = null) {
+  if (!Array.isArray(columns) && isCompactCastleResultView()) return getCompactResultCastles(row, listKey);
+  return (Array.isArray(columns) ? columns : getCastleTypeColumns([row], listKey))
+    .flatMap((column) => getCastlesForColumn(row, listKey, column));
+}
+
+function getCastleTypeColumns(rows, listKey) {
+  const seen = new Set();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    (Array.isArray(row?.[listKey]) ? row[listKey] : []).forEach((castle) => {
+      if (castle) seen.add(getCastleTypeColumnKey(castle));
+    });
+  });
+  return [...seen].map(getCastleTypeColumn).sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+}
+
+function getAllCastleRegionColumns(rows, listKey) {
+  const maxSlotsByRegion = new Map();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const countsByRegion = new Map();
+    getAllFilteredCastlesForRow(row, listKey).forEach((castle) => {
+      const kingdomId = Number(castle.kingdomId || 0);
+      countsByRegion.set(kingdomId, (countsByRegion.get(kingdomId) || 0) + 1);
+    });
+    countsByRegion.forEach((count, kingdomId) => {
+      maxSlotsByRegion.set(kingdomId, Math.max(maxSlotsByRegion.get(kingdomId) || 0, count));
+    });
+  });
+  return [...maxSlotsByRegion.entries()]
+    .flatMap(([kingdomId, count]) => Array.from({ length: count }, (_, slotIndex) => getCastleRegionColumn(getCastleRegionSlotColumnKey(kingdomId, slotIndex))))
+    .sort((a, b) => a.order - b.order || a.slotIndex - b.slotIndex || a.label.localeCompare(b.label));
+}
+
+function getCastleRegionColumnKey(castle) {
+  return `kingdom:${Number(castle?.kingdomId || 0)}`;
+}
+
+function getCastleRegionSlotColumnKey(kingdomId, slotIndex) {
+  return `kingdom:${Number(kingdomId || 0)}:${Number(slotIndex || 0)}`;
+}
+
+function getCastleRegionColumn(key) {
+  const [, kingdomRaw, slotRaw] = String(key || "").split(":");
+  const kingdomId = Number(kingdomRaw || 0);
+  const slotIndex = Math.max(0, Number(slotRaw || 0));
+  const regionLabel = getKingdomName(kingdomId);
+  const label = slotIndex === 0 ? regionLabel : `${regionLabel} ${slotIndex + 1}`;
+  return {
+    key: getCastleRegionSlotColumnKey(kingdomId, slotIndex),
+    kingdomId,
+    slotIndex,
+    label,
+    emptyLabel: `${regionLabel.toLowerCase()} castle`,
+    order: getCastleRegionColumnOrder(kingdomId) * 100 + slotIndex,
+  };
+}
+
+function getCastleRegionColumnOrder(kingdomId) {
+  switch (Number(kingdomId || 0)) {
+    case 0:
+      return 0;
+    case 2:
+      return 20;
+    case 1:
+      return 30;
+    case 3:
+      return 40;
+    case 4:
+      return 50;
+    default:
+      return 100 + Number(kingdomId || 0);
+  }
+}
+
+function getAllFilteredCastlesForRow(row, listKey) {
+  const selectedRegionIds = getSelectedAllRegionIds();
+  return (Array.isArray(row?.[listKey]) ? row[listKey] : [])
+    .filter((castle) => castle && selectedRegionIds.has(Number(castle.kingdomId || 0)) && allCastleMatchesSelectedCastleKinds(castle))
+    .sort(sortScanResultCastles);
+}
+
+function allCastleMatchesSelectedCastleKinds(castle) {
+  const selectedKindIds = getSelectedAllCastleKindIds();
+  if (selectedKindIds.size === 0) return false;
+  const castleType = Number(castle?.castleType || 0);
+  const kingdomId = Number(castle?.kingdomId || 0);
+  if (selectedKindIds.has("main") && (castleType === 1 || castleType === 12)) return true;
+  if (selectedKindIds.has("outpost") && castleType === 4 && kingdomId === 0) return true;
+  if (selectedKindIds.has("property") && (castleType === 3 || castleType === 22)) return true;
+  return false;
+}
+
+function getCastleTypeColumnKey(castle) {
+  return `type:${Number(castle?.castleType || 0)}`;
+}
+
+function getCastleTypeColumn(key) {
+  const type = Number(String(key || "").replace("type:", ""));
+  const label = CASTLE_TYPE_COLUMN_LABELS.get(type) || getCastleTypeName(type);
+  return {
+    key: `type:${type}`,
+    type,
+    label,
+    emptyLabel: label.toLowerCase(),
+    order: CASTLE_TYPE_COLUMN_ORDER.get(type) ?? 100 + type,
+  };
+}
+
+function renderCastleTypeHeaders(columns) {
+  return columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("");
+}
+
+function renderAllPlayerHeader() {
+  return `
+    <div class="all-column-header">
+      <span class="all-column-title">Player</span>
+      <span class="all-sort-label">Sort by</span>
+      <span class="all-sort-controls" aria-label="Sort players by">
+        ${renderAllSortButton("name", "Name", "Sort players by name")}
+        ${renderAllSortButton("might", "Might", "Sort players by might")}
+        ${renderAllSortButton("scanned", "Scanned", "Sort players by scan status")}
+      </span>
+    </div>
+  `;
+}
+
+function renderAllCastleHeaders(columns) {
+  return columns.map((column) => `
+    <th>
+      <div class="all-column-header">
+        <span class="all-column-title">${escapeHtml(column.label)}</span>
+        <span class="all-sort-label">Sort by</span>
+        <span class="all-sort-controls" aria-label="Sort ${escapeHtml(column.label)} by">
+          ${renderAllSortButton("attack", "Attack", `Sort ${column.label} by attack score`, column.key)}
+          ${renderAllSortButton("building", "Level", `Sort ${column.label} by building level`, column.key)}
+          ${renderAllSortButton("distance", "Distance", `Sort ${column.label} by distance`, column.key)}
+        </span>
+      </div>
+    </th>
+  `).join("");
+}
+
+function renderAllSortButton(metric, label, title, columnKey = "") {
+  const active = isAllSortActive(metric, columnKey);
+  const direction = active ? getAllSortDirection() : getDefaultAllSortDirection(metric);
+  const nextDirection = active ? getOppositeAllSortDirection(direction) : direction;
+  const directionLabel = getAllSortDirectionLabel(metric, direction);
+  const nextDirectionLabel = getAllSortDirectionLabel(metric, nextDirection);
+  const activeLabel = active ? `, currently ${directionLabel}` : "";
+  return `
+    <button type="button" class="all-sort-button all-sort-button--${escapeHtml(direction)}${active ? " is-active" : ""}" data-all-sort="${escapeHtml(metric)}" data-all-sort-column="${escapeHtml(columnKey)}" title="${escapeHtml(`${title}${activeLabel}. Click for ${nextDirectionLabel}.`)}" aria-label="${escapeHtml(`${title}${activeLabel}. Click for ${nextDirectionLabel}.`)}" aria-pressed="${active ? "true" : "false"}">
+      <span class="all-sort-button__arrow" aria-hidden="true"></span>
+      <span class="all-sort-button__label">${escapeHtml(label)}</span>
+    </button>
+  `;
+}
+
+function isAllSortActive(metric, columnKey = "") {
+  return state.allSort?.metric === metric && String(state.allSort?.columnKey || "") === String(columnKey || "");
+}
+
+function getAllSortDirection() {
+  return state.allSort?.direction === "asc" ? "asc" : "desc";
+}
+
+function getAllSortDirectionLabel(metric, direction) {
+  if (metric === "name") return direction === "asc" ? "A to Z" : "Z to A";
+  if (metric === "scanned") return direction === "asc" ? "unscanned first" : "scanned first";
+  return direction === "asc" ? "lowest first" : "highest first";
+}
+
+function getCastleTypeTableMinWidth(columns) {
+  return Math.max(720, 190 + Math.max(1, columns.length) * 240);
+}
+
+function getCastlesForColumn(row, listKey, column) {
+  if (column?.key?.startsWith("kingdom:") && Number.isInteger(column.slotIndex)) {
+    const castles = getAllFilteredCastlesForRow(row, listKey)
+      .filter((castle) => Number(castle?.kingdomId || 0) === Number(column.kingdomId || 0));
+    return castles[column.slotIndex] ? [castles[column.slotIndex]] : [];
+  }
+  const getColumnKey = column?.key?.startsWith("kingdom:") ? getCastleRegionColumnKey : getCastleTypeColumnKey;
+  return (Array.isArray(row?.[listKey]) ? row[listKey] : [])
+    .filter((castle) => getColumnKey(castle) === column.key)
+    .sort(sortScanResultCastles);
+}
+
+function renderCastleTypeCell(castles, column, renderCard) {
+  const cards = castles.map(renderCard).join("");
+  return `
+    <td>
+      <div class="watchtower-castle-stack">
+        ${cards || renderEmptyCastleTypeCard(column)}
+      </div>
+    </td>
+  `;
+}
+
+function renderEmptyCastleTypeCard(column) {
+  return `
+    <span class="watchtower-castle-cell watchtower-castle-cell--empty">
+      <strong>-</strong>
+      <span>No ${escapeHtml(column.emptyLabel)}</span>
+    </span>
+  `;
+}
+
+function renderEmptyCompactCastleCard() {
+  return `
+    <span class="watchtower-castle-cell watchtower-castle-cell--empty">
+      <strong>-</strong>
+      <span>No castle in this slot</span>
+    </span>
+  `;
+}
+
+function renderCompactCastleCell(castle, renderCard) {
+  return `
+    <td>
+      ${castle ? renderCard(castle) : renderEmptyCompactCastleCard()}
+    </td>
+  `;
+}
+
+function renderWatchtowerResultRow(row, columns, selectedBuilding) {
+  const cells = columns.map((column) => {
+    const castles = getCastlesForColumn(row, "castles", column);
+    return renderCastleTypeCell(castles, column, (castle) => renderBuildingLevelCastleCard(row, castle, selectedBuilding));
   }).join("");
   return `
     <tr>
@@ -3738,9 +6934,283 @@ function renderWatchtowerResultRow(row, columnCount, selectedBuilding) {
   `;
 }
 
-function renderAttackScoreResultRow(row, columnCount) {
+function renderCompactWatchtowerResultRow(row, columnCount, selectedBuilding) {
+  const castles = getCompactResultCastles(row, "castles");
   const cells = Array.from({ length: columnCount }, (_, index) => {
-    return renderAttackScoreCastleCell(row.targetCastles[index]);
+    return renderCompactCastleCell(castles[index], (castle) => renderBuildingLevelCastleCard(row, castle, selectedBuilding));
+  }).join("");
+  return `
+    <tr>
+      <td>
+        <span class="watchtower-player-cell">
+          <strong>${escapeHtml(row.playerName)}</strong>
+        </span>
+      </td>
+      ${cells}
+    </tr>
+  `;
+}
+
+function renderDistanceResultRow(row, columns, origin, rowIndex) {
+  const rowStatus = getDistanceRowStatus(row);
+  const cells = columns.map((column) => {
+    const castles = getCastlesForColumn(row, "castles", column);
+    return renderCastleTypeCell(castles, column, (castle) => renderDistanceCastleCard(castle, origin, rowStatus, row));
+  }).join("");
+  return `
+    <tr data-distance-row-index="${rowIndex}">
+      <td>
+        <span class="watchtower-player-cell" data-distance-player-cell${rowStatus.title ? ` title="${escapeHtml(rowStatus.title)}"` : ""}>
+          <strong>${escapeHtml(row.playerName)}</strong>
+          ${rowStatus.badges.length > 0 ? `<span>${rowStatus.badges.map(escapeHtml).join(" / ")}</span>` : ""}
+        </span>
+      </td>
+      ${cells}
+    </tr>
+  `;
+}
+
+function renderCompactDistanceResultRow(row, columnCount, origin, rowIndex) {
+  const rowStatus = getDistanceRowStatus(row);
+  const castles = getCompactResultCastles(row, "castles");
+  const cells = Array.from({ length: columnCount }, (_, index) => {
+    return renderCompactCastleCell(castles[index], (castle) => renderDistanceCastleCard(castle, origin, rowStatus, row));
+  }).join("");
+  return `
+    <tr data-distance-row-index="${rowIndex}">
+      <td>
+        <span class="watchtower-player-cell" data-distance-player-cell${rowStatus.title ? ` title="${escapeHtml(rowStatus.title)}"` : ""}>
+          <strong>${escapeHtml(row.playerName)}</strong>
+          ${rowStatus.badges.length > 0 ? `<span>${rowStatus.badges.map(escapeHtml).join(" / ")}</span>` : ""}
+        </span>
+      </td>
+      ${cells}
+    </tr>
+  `;
+}
+
+function renderAllResultRow(row, columns, selectedBuilding, origin) {
+  const cells = columns.map((column) => {
+    const castles = getCastlesForColumn(row, "castles", column);
+    return renderCastleTypeCell(castles, column, (castle) => renderAllCastleCard(row, castle, selectedBuilding, origin));
+  }).join("");
+  const rowKey = getAllRowDomKey(row);
+  const activeTarget = getActiveAttackScoreTargetForAllRow(row);
+  return `
+    <tr data-all-row="${escapeHtml(rowKey)}" data-all-player-name="${escapeHtml(row.playerName || "")}">
+      <td>
+        ${renderAllPlayerCell(row)}
+      </td>
+      ${cells}
+    </tr>
+    ${activeTarget ? renderAllAttackScoreDropdownRow(rowKey, activeTarget, columns.length + 1) : ""}
+  `;
+}
+
+function renderCompactAllResultRow(row, columnCount, selectedBuilding, origin) {
+  const castles = getCompactResultCastles(row, "castles");
+  const cells = Array.from({ length: columnCount }, (_, index) => {
+    return renderCompactCastleCell(castles[index], (castle) => renderAllCastleCard(row, castle, selectedBuilding, origin));
+  }).join("");
+  const rowKey = getAllRowDomKey(row);
+  const activeTarget = getActiveAttackScoreTargetForAllRow(row);
+  return `
+    <tr data-all-row="${escapeHtml(rowKey)}" data-all-player-name="${escapeHtml(row.playerName || "")}">
+      <td>
+        ${renderAllPlayerCell(row)}
+      </td>
+      ${cells}
+    </tr>
+    ${activeTarget ? renderAllAttackScoreDropdownRow(rowKey, activeTarget, columnCount + 1) : ""}
+  `;
+}
+
+function getActiveAttackScoreTargetForAllRow(row) {
+  if (!state.activeAttackScoreCastleKey) return null;
+  return (row?.watchtowerRow?.targetCastles || []).find((target) => target.key === state.activeAttackScoreCastleKey) || null;
+}
+
+function renderAllAttackScoreDropdownRow(rowKey, target, colspan) {
+  return `
+    <tr class="all-attack-breakdown-row" data-all-breakdown-row="${escapeHtml(rowKey)}">
+      <td colspan="${Math.max(1, Number(colspan) || 1)}">
+        <div class="all-attack-breakdown-panel">
+          ${renderAttackScoreBreakdown(target, "all")}
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+function renderAllPlayerCell(row) {
+  const scanned = Boolean(row?.watchtowerRow);
+  const player = getRosterPlayerForAllRow(row);
+  const playerKey = player ? getPlayerKey(player) : String(row?.playerKey || "");
+  const might = parseNumeric(player?.might_current ?? row?.mightCurrent);
+  const loading = state.watchtowerLoadingPlayerIds.has(playerKey) || state.watchtowerLoadingPlayerIds.has(String(row?.playerKey || ""));
+  const scanLabel = loading
+    ? `Scanning ${row.playerName}`
+    : player
+      ? scanned
+        ? `${row.playerName} already evaluated; rescan player`
+        : `Scan ${row.playerName}`
+      : `Cannot scan ${row.playerName}; player is not in the roster`;
+  const scanButton = `
+    <button type="button" class="player-action-btn player-action-btn--watchtower all-player-cell__scan-button${scanned ? " is-scanned" : ""}${loading ? " is-loading" : ""}" data-all-player-scan="${escapeHtml(playerKey)}" title="${escapeHtml(scanLabel)}" aria-label="${escapeHtml(scanLabel)}" aria-pressed="false"${!player || loading || state.watchtowerScanActive ? " disabled" : ""}>
+      <img src="assets/eye-watchtower.svg" alt="">
+    </button>
+  `;
+  return `
+    <span class="watchtower-player-cell all-player-cell${scanned ? " is-scanned" : ""}">
+      <span class="all-player-cell__name">
+        <strong>${escapeHtml(row.playerName)}</strong>
+        ${scanButton}
+      </span>
+      <span class="all-player-cell__meta">
+        ${renderAllPlayerMightBadge(might)}
+      </span>
+    </span>
+  `;
+}
+
+function renderAllPlayerMightBadge(might) {
+  const normalizedMight = Math.max(0, parseNumeric(might));
+  if (normalizedMight <= 0) return "";
+  return `
+    <span class="all-player-might" title="${escapeHtml(`${formatNumber(normalizedMight)} might points`)}">
+      <img src="../gge-tracker/gge-tracker-frontend/src/assets/might.png" alt="" loading="lazy">
+      <strong>${escapeHtml(formatAllPlayerMightValue(normalizedMight))}</strong>
+    </span>
+  `;
+}
+
+function formatAllPlayerMightValue(might) {
+  const millions = Math.max(0, Number(might || 0)) / 1000000;
+  if (millions <= 0) return "-";
+  return `${formatRoundedRuleNumber(millions)}M`;
+}
+
+function getRosterPlayerForAllRow(row) {
+  if (!row) return null;
+  const rowKey = String(row.playerKey || "");
+  const rowName = String(row.playerName || "").trim().toLowerCase();
+  return state.players.find((player) => getPlayerKey(player) === rowKey)
+    || state.players.find((player) => String(player.player_name || "").trim().toLowerCase() === rowName)
+    || null;
+}
+
+function getAllRowDomKey(row) {
+  const player = getRosterPlayerForAllRow(row);
+  return player ? getPlayerKey(player) : String(row?.playerKey || "");
+}
+
+function getDistanceRowStatus(row) {
+  const meta = getDistanceRowFilterMeta(row);
+  const mightRange = getEffectiveDistanceMightMillions();
+  const lootDaysRange = getEffectiveDistanceLootDays();
+  const badges = [];
+  const activeFilters = [];
+  const matchedFilters = [];
+
+  if (meta.isBotLike) badges.push("Bot-like");
+  if (meta.underProtection) badges.push("Protected");
+  if (Number.isFinite(mightRange)) {
+    const label = `might points >= ${formatMightRuleValue(mightRange)}`;
+    activeFilters.push(label);
+    if (isValueAtLeast(meta.playerMightMillions, mightRange)) {
+      matchedFilters.push(label);
+    }
+  }
+  if (Number.isFinite(lootDaysRange)) {
+    const label = `last time looted >= ${formatLootAgeRuleValue(lootDaysRange)}`;
+    activeFilters.push(label);
+    if (isValueAtLeast(meta.lootAgeDays, lootDaysRange)) {
+      matchedFilters.push(label);
+    }
+  }
+  if (state.distanceHighlightNotCheating) {
+    activeFilters.push("not cheating");
+    if (meta.matchesNotCheating) matchedFilters.push("not cheating");
+  }
+  if (state.distanceHighlightNotBirded) {
+    activeFilters.push("not birded");
+    if (meta.matchesNotBirded) matchedFilters.push("not birded");
+  }
+
+  const matchesActiveFilters = activeFilters.length > 0 && matchedFilters.length === activeFilters.length;
+  return {
+    badges,
+    hasStatusFilter: activeFilters.length > 0,
+    matchesStatusFilters: matchesActiveFilters,
+    title: matchesActiveFilters
+      ? `Matches ${matchedFilters.join(" and ")} highlight filter${matchedFilters.length === 1 ? "" : "s"}`
+      : badges.join(" / "),
+  };
+}
+
+function getDistanceRowFilterMeta(row) {
+  const player = getRosterPlayerForDistanceRow(row);
+  const activity = player ? state.lootActivityByPlayerKey.get(getPlayerKey(player)) : null;
+  const isBotLike = Boolean(activity?.botLikeLootStreak?.isFlagged);
+  const hasBotSignalLoaded = Boolean(activity && !activity.error && activity.botLikeLootStreak);
+  const underProtection = Boolean(player && isProtected(player.peace_disabled_at));
+  return {
+    player,
+    activity,
+    isBotLike,
+    hasBotSignalLoaded,
+    underProtection,
+    playerMightMillions: getDistanceRowMightMillions(row, player),
+    lootAgeDays: getDistanceRowLootAgeDays(activity),
+    matchesNotCheating: Boolean(player && hasBotSignalLoaded && !isBotLike),
+    matchesNotBirded: Boolean(player && !underProtection),
+  };
+}
+
+function getDistanceRowMightMillions(row, player) {
+  const might = parseNumeric(player?.might_current ?? row?.mightCurrent);
+  return might > 0 ? might / 1000000 : null;
+}
+
+function getDistanceRowLootAgeDays(activity) {
+  if (!activity || activity.error) return null;
+  if (!activity.latestPositiveDate) return 30;
+  const date = activity.latestPositiveDate instanceof Date
+    ? activity.latestPositiveDate
+    : new Date(activity.latestPositiveDate);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.max(0, (Date.now() - date.getTime()) / 86400000);
+}
+
+function getRosterPlayerForDistanceRow(row) {
+  const rowKey = String(row?.playerKey || "");
+  const rowName = String(row?.playerName || "").trim().toLowerCase();
+  return state.players.find((player) => getPlayerKey(player) === rowKey)
+    || state.players.find((player) => String(player.player_name || "").trim().toLowerCase() === rowName)
+    || null;
+}
+
+function renderAttackScoreResultRow(row, columns) {
+  const cells = columns.map((column) => {
+    const castles = getCastlesForColumn(row, "targetCastles", column);
+    return renderCastleTypeCell(castles, column, renderAttackScoreCastleCard);
+  }).join("");
+  return `
+    <tr>
+      <td>
+        <span class="watchtower-player-cell">
+          <strong>${escapeHtml(row.playerName)}</strong>
+        </span>
+      </td>
+      ${cells}
+    </tr>
+  `;
+}
+
+function renderCompactAttackScoreResultRow(row, columnCount) {
+  const castles = getCompactResultCastles(row, "targetCastles");
+  const cells = Array.from({ length: columnCount }, (_, index) => {
+    return renderCompactCastleCell(castles[index], renderAttackScoreCastleCard);
   }).join("");
   return `
     <tr>
@@ -3759,15 +7229,17 @@ function getActiveAttackScoreTarget(rows) {
   return rows.flatMap((row) => row.targetCastles || []).find((target) => target.key === state.activeAttackScoreCastleKey) || null;
 }
 
-function toggleAttackScoreCastle(targetKey) {
-  if (!targetKey) return;
+function toggleAttackScoreCastle(targetKey, options = {}) {
+  if (!targetKey) return false;
   state.activeAttackScoreCastleKey = state.activeAttackScoreCastleKey === targetKey ? "" : targetKey;
-  renderAttackScoreChart();
+  if (options.renderAttackScore !== false) renderAttackScoreChart();
+  return state.activeAttackScoreCastleKey === targetKey;
 }
 
-function renderAttackScoreBreakdown(target) {
+function renderAttackScoreBreakdown(target, context = "standalone") {
+  const contextClass = context ? ` attack-score-breakdown--${escapeHtml(context)}` : "";
   return `
-    <div class="attack-score-breakdown">
+    <div class="attack-score-breakdown${contextClass}">
       <div class="attack-score-breakdown__header">
         <div>
           <span class="label">Attack score breakdown</span>
@@ -3780,18 +7252,7 @@ function renderAttackScoreBreakdown(target) {
   `;
 }
 
-function renderBuildingLevelCastleCell(row, castle, selectedBuilding) {
-  if (!castle) {
-    return `
-      <td>
-        <span class="watchtower-castle-cell watchtower-castle-cell--empty">
-          <strong>-</strong>
-          <span>No castle in this slot</span>
-        </span>
-      </td>
-    `;
-  }
-
+function renderBuildingLevelCastleCard(row, castle, selectedBuilding) {
   const buildingRow = selectedBuilding ? getBuildingLevelRowForCastle(row, castle, selectedBuilding.key) : null;
   const levelLabel = castle.error ? "Failed" : buildingRow?.maxLevel > 0 ? `L${buildingRow.maxLevel}` : "None";
   const modifier = castle.error ? "error" : buildingRow?.maxLevel > 0 ? "found" : "missing";
@@ -3799,23 +7260,45 @@ function renderBuildingLevelCastleCell(row, castle, selectedBuilding) {
     ? "Select a building"
     : buildingRow?.count > 1 ? `${buildingRow.count} found` : buildingRow?.maxLevel > 0 ? selectedBuilding.displayName : `No ${selectedBuilding.displayName}`;
   return `
-    <td>
-      <span class="watchtower-castle-cell watchtower-castle-cell--${modifier}">
-        <img src="${escapeHtml(castle.castleIconUrl)}" alt="">
-        <span class="watchtower-castle-cell__copy">
-          <strong>${escapeHtml(castle.castleName)}</strong>
-          <span>${escapeHtml(getKingdomName(castle.kingdomId))} - ${escapeHtml(getCastleTypeName(castle.castleType))}</span>
-          <small>${escapeHtml(countLabel)}</small>
-        </span>
-        <b>${escapeHtml(levelLabel)}</b>
+    <span class="watchtower-castle-cell watchtower-castle-cell--${modifier}">
+      <img src="${escapeHtml(castle.castleIconUrl)}" alt="">
+      <span class="watchtower-castle-cell__copy">
+        <strong>${escapeHtml(castle.castleName)}</strong>
+        <span>${escapeHtml(getKingdomName(castle.kingdomId))} - ${escapeHtml(getCastleTypeName(castle.castleType))}</span>
+        <small>${escapeHtml(countLabel)}</small>
       </span>
-    </td>
+      <b>${escapeHtml(levelLabel)}</b>
+    </span>
   `;
 }
 
 function getSelectedLevelBuilding() {
   if (!state.selectedLevelBuildingKey) syncSelectedLevelBuildingKey();
   return state.buildingCatalog.find((building) => building.key === state.selectedLevelBuildingKey) || null;
+}
+
+function getSelectedHomeCastle() {
+  if (!state.selectedHomeCastleKey && state.homeCastles.length > 0) {
+    state.selectedHomeCastleKey = pickDefaultHomeCastleKey(state.homeCastles);
+  }
+  return state.homeCastles.find((castle) => castle.key === state.selectedHomeCastleKey) || null;
+}
+
+function getSelectedDistanceOrigin() {
+  if (state.distanceOriginMode === "coordinates") {
+    const origin = {
+      castleId: "manual-coordinates",
+      castleName: `Coordinates ${formatCoordinates(state.distanceCoordinates)}`,
+      castleType: 0,
+      castleIconUrl: "assets/attack-target.svg",
+      kingdomId: Number(state.distanceCoordinates.kingdomId || 0),
+      positionX: parseCoordinate(state.distanceCoordinates.positionX),
+      positionY: parseCoordinate(state.distanceCoordinates.positionY),
+    };
+    return hasCastlePosition(origin) ? origin : null;
+  }
+
+  return getSelectedHomeCastle();
 }
 
 function getBuildingLevelRowForCastle(row, castle, buildingKey) {
@@ -3832,34 +7315,242 @@ function getBuildingLevelRowForCastle(row, castle, buildingKey) {
   });
 }
 
-function renderAttackScoreCastleCell(castle) {
-  if (!castle) {
-    return `
-      <td>
-        <span class="watchtower-castle-cell watchtower-castle-cell--empty">
-          <strong>-</strong>
-          <span>No castle in this slot</span>
-        </span>
-      </td>
-    `;
-  }
-
+function renderAttackScoreCastleCard(castle) {
   const modifier = castle.error ? "error" : `target-${castle.verdictClass || "unknown"}`;
   const scoreLabel = castle.error ? "Failed" : `${castle.score}/100`;
   const active = state.activeAttackScoreCastleKey === castle.key;
   return `
-    <td>
-      <button type="button" class="watchtower-castle-cell watchtower-castle-cell--${escapeHtml(modifier)} attack-score-card-button${active ? " is-active" : ""}" data-attack-score-castle="${escapeHtml(castle.key || "")}" aria-pressed="${active ? "true" : "false"}" title="Show attack score breakdown for ${escapeHtml(castle.castleName)}">
-        <img src="${escapeHtml(castle.castleIconUrl)}" alt="">
-        <span class="watchtower-castle-cell__copy">
-          <strong>${escapeHtml(castle.castleName)}</strong>
-          <span>${escapeHtml(getKingdomName(castle.kingdomId))} - ${escapeHtml(getCastleTypeName(castle.castleType))}</span>
-          <small>${escapeHtml(castle.verdict)}</small>
-        </span>
-        <b>${escapeHtml(scoreLabel)}</b>
-      </button>
-    </td>
+    <button type="button" class="watchtower-castle-cell watchtower-castle-cell--${escapeHtml(modifier)} attack-score-card-button${active ? " is-active" : ""}" data-attack-score-castle="${escapeHtml(castle.key || "")}" aria-pressed="${active ? "true" : "false"}" title="Show attack score breakdown for ${escapeHtml(castle.castleName)}">
+      <img src="${escapeHtml(castle.castleIconUrl)}" alt="">
+      <span class="watchtower-castle-cell__copy">
+        <strong>${escapeHtml(castle.castleName)}</strong>
+        <span>${escapeHtml(getKingdomName(castle.kingdomId))} - ${escapeHtml(getCastleTypeName(castle.castleType))}</span>
+        <small>${escapeHtml(castle.verdict)}</small>
+      </span>
+      <b>${escapeHtml(scoreLabel)}</b>
+    </button>
   `;
+}
+
+function renderDistanceCastleCard(castle, selectedOrigin, rowStatus = null, row = null) {
+  const origin = getDistanceOriginForTarget(castle, selectedOrigin);
+  const distance = getCastleDistance(origin, castle);
+  const modifier = getDistanceModifier(origin, castle, distance);
+  const distanceLabel = Number.isFinite(distance) ? formatDistance(distance) : "-";
+  const detailLabel = getDistanceDetailLabel(origin, castle, distance, selectedOrigin);
+  const shouldGlow = shouldGlowDistanceCastle(distance, rowStatus);
+  const highlightClass = shouldGlow ? " watchtower-castle-cell--distance-highlight" : "";
+  const iconUrl = getDisplayCastleIconUrl(row, castle);
+  return `
+    <span class="watchtower-castle-cell watchtower-castle-cell--${escapeHtml(modifier)}${highlightClass}" data-distance-castle-card>
+      <img src="${escapeHtml(iconUrl)}" alt="">
+      <span class="watchtower-castle-cell__copy">
+        <strong>${escapeHtml(castle.castleName)}</strong>
+        <span>${escapeHtml(getKingdomName(castle.kingdomId))} - ${escapeHtml(getCastleTypeName(castle.castleType))} - ${escapeHtml(formatCoordinates(castle))}</span>
+        <small>${escapeHtml(detailLabel)}</small>
+      </span>
+      <b>${escapeHtml(distanceLabel)}</b>
+    </span>
+  `;
+}
+
+function renderAllCastleCard(row, castle, selectedBuilding, selectedOrigin) {
+  const attackTarget = getAllAttackTargetForCastle(row, castle);
+  const buildingRow = getAllBuildingRowForCastle(row, castle, selectedBuilding);
+  const origin = getDistanceOriginForTarget(castle, selectedOrigin);
+  const distance = getCastleDistance(origin, castle);
+  const distanceLabel = Number.isFinite(distance) ? formatDistance(distance) : "-";
+  const rowStatus = getDistanceRowStatus(row);
+  const rowMeta = getDistanceRowFilterMeta(row);
+  const highlightClass = shouldGlowDistanceCastle(distance, rowStatus) ? " watchtower-castle-cell--distance-highlight" : "";
+  const active = attackTarget && state.activeAttackScoreCastleKey === attackTarget.key;
+  const tagName = attackTarget ? "button" : "span";
+  const scoreText = getAllAttackScoreText(row, attackTarget);
+  const buildingText = getAllBuildingLevelText(row, buildingRow, selectedBuilding);
+  const attackScore = attackTarget && !attackTarget.error && Number.isFinite(Number(attackTarget.score))
+    ? Math.round(Number(attackTarget.score))
+    : null;
+  const buildingLevel = Number(buildingRow?.maxLevel || 0) > 0 ? Number(buildingRow.maxLevel) : null;
+  const displayDistance = getComparableDisplayedDistance(distance);
+  const iconUrl = getDisplayCastleIconUrl(row, castle, attackTarget);
+  const actionClass = attackTarget ? " all-castle-card--clickable" : "";
+  const attackMetricClass = attackTarget && !attackTarget.error
+    ? `all-card-metric--attack-${escapeHtml(attackTarget.verdictClass || "unknown")}`
+    : "all-card-metric--missing";
+  const buildingMetricClass = buildingRow?.maxLevel > 0 ? "all-card-metric--building-found" : "all-card-metric--missing";
+  const distanceMetricClass = Number.isFinite(distance) ? "all-card-metric--distance" : "all-card-metric--missing";
+  const buttonAttrs = attackTarget
+    ? ` type="button" data-attack-score-castle="${escapeHtml(attackTarget.key || "")}" aria-pressed="${active ? "true" : "false"}" title="Show attack score breakdown for ${escapeHtml(attackTarget.castleName || castle.castleName)}"`
+    : "";
+  const filterAttrs = [
+    `data-all-card`,
+    `data-distance="${Number.isFinite(displayDistance) ? escapeHtml(displayDistance) : ""}"`,
+    `data-attack-score="${Number.isFinite(attackScore) ? escapeHtml(attackScore) : ""}"`,
+    `data-building-level="${Number.isFinite(buildingLevel) ? escapeHtml(buildingLevel) : ""}"`,
+    `data-might="${Number.isFinite(rowMeta.playerMightMillions) ? escapeHtml(rowMeta.playerMightMillions) : ""}"`,
+    `data-loot-days="${Number.isFinite(rowMeta.lootAgeDays) ? escapeHtml(rowMeta.lootAgeDays) : ""}"`,
+    `data-not-cheating="${rowMeta.matchesNotCheating ? "true" : "false"}"`,
+    `data-not-birded="${rowMeta.matchesNotBirded ? "true" : "false"}"`,
+    `data-scanned="${row.watchtowerRow ? "true" : "false"}"`,
+  ].join(" ");
+  return `
+    <${tagName}${buttonAttrs} ${filterAttrs} class="watchtower-castle-cell all-castle-card${actionClass}${active ? " is-active" : ""}${highlightClass}">
+      <img src="${escapeHtml(iconUrl)}" alt="">
+      <span class="watchtower-castle-cell__copy all-castle-card__copy">
+        <strong>${escapeHtml(castle.castleName || attackTarget?.castleName || "Castle")}</strong>
+        <span>${escapeHtml(getKingdomName(castle.kingdomId))}</span>
+        <span class="all-card-metrics" aria-label="Master castle metrics">
+          ${renderAllCardMetric("attack", scoreText.value, attackMetricClass, "Attack score")}
+          ${renderAllCardMetric("building", buildingText, buildingMetricClass, selectedBuilding?.displayName || "Building level")}
+          ${renderAllCardMetric("distance", distanceLabel, distanceMetricClass, "Distance")}
+        </span>
+      </span>
+    </${tagName}>
+  `;
+}
+
+function renderAllCardMetric(type, value, className, title) {
+  const safeType = String(type || "metric").replace(/[^a-z0-9_-]/gi, "").toLowerCase() || "metric";
+  return `
+    <b class="all-card-metric all-card-metric--${escapeHtml(safeType)} ${className}" title="${escapeHtml(title)}">
+      <span class="all-card-metric__icon all-card-metric__icon--${escapeHtml(safeType)}" aria-hidden="true"></span>
+      <span>${escapeHtml(value)}</span>
+    </b>
+  `;
+}
+
+function getAllAttackScoreText(row, attackTarget) {
+  if (!attackTarget) return row.watchtowerRow ? { value: "-", detail: "not scored" } : { value: "-", detail: "not scanned" };
+  if (attackTarget.error) return { value: "Failed", detail: "failed" };
+  return {
+    value: String(Math.round(Number(attackTarget.score || 0))),
+    detail: attackTarget.verdict || "scored",
+  };
+}
+
+function getAllBuildingLevelText(row, buildingRow, selectedBuilding) {
+  if (!selectedBuilding) return "-";
+  if (!row.watchtowerRow) return "-";
+  if (!buildingRow) return "None";
+  return buildingRow.maxLevel > 0 ? `L${buildingRow.maxLevel}` : "None";
+}
+
+function getAllAttackTargetForCastle(row, castle) {
+  return findMatchingCastle(row?.watchtowerRow?.targetCastles, castle);
+}
+
+function getAllBuildingRowForCastle(row, castle, selectedBuilding) {
+  if (!row?.watchtowerRow || !selectedBuilding) return null;
+  const sourceCastle = findMatchingCastle(row.watchtowerRow.castles, castle) || castle;
+  return getBuildingLevelRowForCastle(row.watchtowerRow, sourceCastle, selectedBuilding.key);
+}
+
+function getDisplayCastleIconUrl(row, castle, fallbackCastle = null) {
+  const scannedCastle = getScannedCastleForDisplay(row, castle);
+  return scannedCastle?.castleIconUrl
+    || fallbackCastle?.castleIconUrl
+    || castle?.castleIconUrl
+    || "assets/attack-target.svg";
+}
+
+function getScannedCastleForDisplay(row, castle) {
+  const watchtowerRow = row?.watchtowerRow || getWatchtowerRowForPlayer(row);
+  return findMatchingCastle(watchtowerRow?.castles, castle)
+    || findMatchingCastle(watchtowerRow?.targetCastles, castle)
+    || null;
+}
+
+function getWatchtowerRowForPlayer(row) {
+  if (!row) return null;
+  const rowKey = String(row.playerKey || "").trim();
+  if (rowKey && state.watchtowerResults.has(rowKey)) return state.watchtowerResults.get(rowKey);
+  const rowName = String(row.playerName || row.name || "").trim().toLowerCase();
+  if (!rowName) return null;
+  return [...state.watchtowerResults.values()].find((result) => {
+    return String(result?.playerName || result?.name || "").trim().toLowerCase() === rowName;
+  }) || null;
+}
+
+function findMatchingCastle(castles, targetCastle) {
+  if (!targetCastle || !Array.isArray(castles)) return null;
+  return castles.find((castle) => castlesMatch(castle, targetCastle)) || null;
+}
+
+function castlesMatch(a, b) {
+  if (!a || !b) return false;
+  const aId = String(a.castleId || a.id || "").trim();
+  const bId = String(b.castleId || b.id || "").trim();
+  if (aId && bId && aId === bId) return true;
+  const aKey = String(a.key || "").trim();
+  const bKey = String(b.key || "").trim();
+  if (aKey && bKey && aKey === bKey) return true;
+  const ax = parseCoordinate(a.positionX);
+  const ay = parseCoordinate(a.positionY);
+  const bx = parseCoordinate(b.positionX);
+  const by = parseCoordinate(b.positionY);
+  if (Number.isFinite(ax) && Number.isFinite(ay) && Number.isFinite(bx) && Number.isFinite(by)) {
+    return Number(a.kingdomId || 0) === Number(b.kingdomId || 0)
+      && Number(a.castleType || 0) === Number(b.castleType || 0)
+      && ax === bx
+      && ay === by;
+  }
+  return Number(a.kingdomId || 0) === Number(b.kingdomId || 0)
+    && Number(a.castleType || 0) === Number(b.castleType || 0)
+    && String(a.castleName || "").trim().toLowerCase() === String(b.castleName || "").trim().toLowerCase();
+}
+
+function getDistanceOriginForTarget(targetCastle, selectedOrigin) {
+  if (!targetCastle || !selectedOrigin) return selectedOrigin || null;
+  if (state.distanceOriginMode !== "castle") return selectedOrigin;
+
+  const targetKingdom = Number(targetCastle.kingdomId || 0);
+  const selectedKingdom = Number(selectedOrigin.kingdomId || 0);
+  if (targetKingdom === 0) {
+    return selectedKingdom === 0 ? selectedOrigin : getHomeRegionalCastleForKingdom(0);
+  }
+
+  return getHomeRegionalCastleForKingdom(targetKingdom);
+}
+
+function getHomeRegionalCastleForKingdom(kingdomId) {
+  const normalizedKingdom = Number(kingdomId || 0);
+  const requiredType = normalizedKingdom === 0 ? 1 : 12;
+  return state.homeCastles.find((castle) => {
+    return Number(castle.kingdomId || 0) === normalizedKingdom
+      && Number(castle.castleType || 0) === requiredType
+      && hasCastlePosition(castle);
+  }) || null;
+}
+
+function shouldGlowDistanceCastle(distance, rowStatus = null) {
+  const threshold = getEffectiveDistanceHighlightThreshold();
+  const hasDistanceFilter = Number.isFinite(threshold);
+  const distanceMatches = !hasDistanceFilter || isDistanceWithinHighlightThreshold(distance);
+  const statusMatches = !rowStatus?.hasStatusFilter || rowStatus.matchesStatusFilters;
+  return (hasDistanceFilter || Boolean(rowStatus?.hasStatusFilter)) && distanceMatches && statusMatches;
+}
+
+function isDistanceWithinHighlightThreshold(distance) {
+  const threshold = getEffectiveDistanceHighlightThreshold();
+  const visibleDistance = getComparableDisplayedDistance(distance);
+  return isValueAtMost(visibleDistance, threshold);
+}
+
+function getEffectiveDistanceHighlightThreshold() {
+  return state.distanceHighlightThreshold;
+}
+
+function getEffectiveDistanceMightMillions() {
+  return state.distanceHighlightMightMillions;
+}
+
+function getEffectiveDistanceLootDays() {
+  return state.distanceHighlightLootDays;
+}
+
+function getComparableDisplayedDistance(distance) {
+  if (!Number.isFinite(distance)) return null;
+  return distance < 100 ? Number(distance.toFixed(1)) : Math.round(distance);
 }
 
 function getSelectedBuildingFilters() {
@@ -3971,8 +7662,9 @@ function formatConstructionComment(value) {
 
 function getConstructionItemEffectText(item) {
   if (item.effects) {
-    const [effectId, effectValue] = String(item.effects).split("&");
-    return effectValue ? `Effect ${effectId}: ${effectValue}` : `Effect ${item.effects}`;
+    const effect = getConstructionItemEffectDefinition(item);
+    const label = formatConstructionComment(effect.name || effect.typeName || `Effect ${effect.id}`);
+    return Number.isFinite(effect.value) ? `${label} +${formatNumber(effect.value)}` : label;
   }
   if (item.decoPoints) return `Decoration +${formatNumber(item.decoPoints)}`;
 
@@ -4077,6 +7769,129 @@ function normalizeCastleSearchResponse(value) {
   return [];
 }
 
+function hasCastlePosition(castle) {
+  return Number.isFinite(parseCoordinate(castle?.positionX)) && Number.isFinite(parseCoordinate(castle?.positionY));
+}
+
+function getCastleDistance(homeCastle, targetCastle) {
+  if (!homeCastle || !targetCastle) return null;
+  if (Number(homeCastle.kingdomId) !== Number(targetCastle.kingdomId)) return null;
+  if (!hasCastlePosition(homeCastle) || !hasCastlePosition(targetCastle)) return null;
+  const deltaX = Number(targetCastle.positionX) - Number(homeCastle.positionX);
+  const deltaY = Number(targetCastle.positionY) - Number(homeCastle.positionY);
+  return Math.hypot(deltaX, deltaY);
+}
+
+function getDistanceModifier(homeCastle, targetCastle, distance) {
+  if (!homeCastle) return "missing";
+  if (Number(homeCastle.kingdomId) !== Number(targetCastle?.kingdomId)) return "missing";
+  if (!Number.isFinite(distance)) return "error";
+  if (distance <= 50) return "distance-near";
+  if (distance <= 200) return "distance-mid";
+  return "distance-far";
+}
+
+function getDistanceDetailLabel(homeCastle, targetCastle, distance, selectedOrigin = homeCastle) {
+  if (!selectedOrigin) return state.distanceOriginMode === "coordinates" ? "Enter origin coordinates" : "Select your castle first";
+  if (!homeCastle) {
+    const kingdomName = getKingdomName(targetCastle?.kingdomId);
+    return Number(targetCastle?.kingdomId || 0) === 0
+      ? "No Green main castle loaded"
+      : `No ${kingdomName} main castle loaded`;
+  }
+  if (Number(homeCastle.kingdomId) !== Number(targetCastle?.kingdomId)) {
+    return state.distanceOriginMode === "coordinates"
+      ? `Switch region to ${getKingdomName(targetCastle?.kingdomId)}`
+      : `Choose a ${getKingdomName(targetCastle?.kingdomId)} castle to compare`;
+  }
+  if (!Number.isFinite(distance)) return "No coordinates available";
+  const usesRegionalOrigin = selectedOrigin
+    && String(homeCastle.key || homeCastle.castleId || "") !== String(selectedOrigin.key || selectedOrigin.castleId || "");
+  const originLabel = usesRegionalOrigin
+    ? `${homeCastle.castleName} (${getKingdomName(homeCastle.kingdomId)})`
+    : homeCastle.castleName;
+  return `${formatCoordinates(targetCastle)} from ${originLabel}`;
+}
+
+function formatDistance(distance) {
+  if (!Number.isFinite(distance)) return "-";
+  return distance < 100 ? distance.toFixed(1) : formatNumber(Math.round(distance));
+}
+
+function formatCoordinate(value) {
+  const number = parseCoordinate(value);
+  return Number.isFinite(number) ? formatNumber(Math.round(number)) : "-";
+}
+
+function formatCoordinates(castle) {
+  return `${formatCoordinate(castle?.positionX)}, ${formatCoordinate(castle?.positionY)}`;
+}
+
+function parseCoordinate(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function parseDistanceHighlightThreshold(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Math.trunc(Number(value));
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function parseDistanceHighlightNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function parseAllFilterNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Math.trunc(Number(value));
+  return Number.isFinite(number) && number > 0 ? number : null;
+}
+
+function formatRoundedRuleNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  const rounded = Math.round(number * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
+function formatDistanceRuleValue(value) {
+  if (Number(value) === Number.POSITIVE_INFINITY) return "Infinite";
+  return Number.isFinite(Number(value)) && Number(value) >= 0 ? formatNumber(Math.round(Number(value))) : "Off";
+}
+
+function formatAttackScoreRuleValue(value) {
+  return Number.isFinite(Number(value)) && Number(value) >= 0 ? `${Math.trunc(Number(value))}/100` : "Off";
+}
+
+function formatBuildingLevelRuleValue(value) {
+  return Number.isFinite(Number(value)) && Number(value) > 0 ? `L${Math.trunc(Number(value))}` : "None";
+}
+
+function formatMightRuleValue(value) {
+  if (Number(value) === Number.POSITIVE_INFINITY) return "Infinite";
+  return Number.isFinite(Number(value)) && Number(value) >= 0 ? `${formatRoundedRuleNumber(value)}M` : "Off";
+}
+
+function formatLootAgeRuleValue(value) {
+  const days = Number(value);
+  if (days === Number.POSITIVE_INFINITY) return "Infinite";
+  if (!Number.isFinite(days) || days < 0) return "Off";
+  if (days === 0) return "0h";
+  if (days < 1) {
+    const hours = Math.max(1, Math.round(days * 24));
+    return `${hours}h`;
+  }
+  return `${formatRoundedRuleNumber(days)}d`;
+}
+
+function formatDistanceInputValue(value) {
+  return Number(value) === Number.POSITIVE_INFINITY ? "Infinite" : formatNumber(Math.max(0, Math.round(Number(value || 0))));
+}
+
 async function mapLimit(items, limit, worker) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -4106,6 +7921,8 @@ function getKingdomName(kingdomId) {
       return "Everwinter";
     case 3:
       return "Fire Peaks";
+    case 4:
+      return "Storm Islands";
     default:
       return "Green";
   }
@@ -4173,6 +7990,14 @@ function formatCompactNumber(value) {
   }).format(number);
 }
 
+function formatScoreContribution(value) {
+  const number = Math.max(0, Number(value || 0));
+  if (number <= 0) return "+0 pts";
+  const rounded = number >= 10 ? Math.round(number) : Math.round(number * 10) / 10;
+  const label = rounded === 1 ? "pt" : "pts";
+  return `+${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)} ${label}`;
+}
+
 function parseNumeric(value) {
   const number = Number(value || 0);
   return Number.isFinite(number) ? number : 0;
@@ -4204,6 +8029,8 @@ function startClock() {
     const birdCount = getProtectedPlayers().length;
     if (birdCount !== state.lastBirdCount) {
       renderAllianceData(true);
+      renderDistanceChart();
+      renderAllChart();
     } else {
       renderAllianceData(false, false);
       updateCountdownCells();
