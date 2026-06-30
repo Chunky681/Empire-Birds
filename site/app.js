@@ -3,7 +3,7 @@ const ALLIANCE_PAGES_TO_LOAD = 5;
 const MAX_VISIBLE_ALLIANCES = 80;
 const MAX_VISIBLE_BUILDINGS = 80;
 const THEME_STORAGE_KEY = "empireBirds.theme";
-const WATCHTOWER_SESSION_CACHE_KEY = "empireBirds.watchtowerResultsByAlliance";
+const WATCHTOWER_SESSION_CACHE_KEY = "empireBirds.watchtowerResultsByAlliance.v2";
 const ALL_REGION_FILTER_STORAGE_KEY = "empireBirds.allRegionFilter";
 const ALL_CASTLE_KIND_FILTER_STORAGE_KEY = "empireBirds.allCastleKindFilter";
 const ALL_DISTANCE_RANGE_FILTER_STORAGE_KEY = "empireBirds.allDistanceRangeFilter";
@@ -358,7 +358,22 @@ const state = {
   targetLoadingPlayerIds: new Set(),
   expandedBuildingPlayerIds: new Set(),
   activePlayerDetailModes: new Map(),
-  collapsedBuildingCastleKeys: new Set(),
+  openBuildingCastleKeys: new Set(),
+  activeCastleDetailTabs: new Map(),
+  activeCastleLayoutModes: new Map(),
+  castleLayoutGoals: new Map(),
+  castleLayoutPlans: new Map(),
+  castleLayoutExcludedKeys: new Map(),
+  castleLayoutPinnedItems: new Map(),
+  castleLayoutBlockedRects: new Map(),
+  castleLayoutBlockModeKeys: new Set(),
+  castleLayoutDragPayload: null,
+  castleLayoutBlockSelection: null,
+  castleLayoutOptimizeModes: new Map(),
+  castleLayoutGeneratingKeys: new Set(),
+  castleLayoutGenerateProgress: new Map(),
+  castleLayoutGenerateCancelTokens: new Map(),
+  castleLayoutGenerateRunId: 0,
   openTargetCastleKeys: new Set(),
   openPublicOrderCastleKeys: new Set(),
   openConstructionItemCastleKeys: new Set(),
@@ -584,7 +599,21 @@ function bindEvents() {
     state.targetLoadingPlayerIds = new Set();
     state.expandedBuildingPlayerIds = new Set();
     state.activePlayerDetailModes = new Map();
-    state.collapsedBuildingCastleKeys = new Set();
+    state.openBuildingCastleKeys = new Set();
+    state.activeCastleDetailTabs = new Map();
+    state.activeCastleLayoutModes = new Map();
+    state.castleLayoutGoals = new Map();
+    state.castleLayoutPlans = new Map();
+    state.castleLayoutExcludedKeys = new Map();
+    state.castleLayoutPinnedItems = new Map();
+    state.castleLayoutBlockedRects = new Map();
+    state.castleLayoutBlockModeKeys = new Set();
+    state.castleLayoutDragPayload = null;
+    state.castleLayoutBlockSelection = null;
+    state.castleLayoutOptimizeModes = new Map();
+    state.castleLayoutGeneratingKeys = new Set();
+    state.castleLayoutGenerateProgress = new Map();
+    state.castleLayoutGenerateCancelTokens = new Map();
     state.openTargetCastleKeys = new Set();
     state.openPublicOrderCastleKeys = new Set();
     state.openConstructionItemCastleKeys = new Set();
@@ -2122,7 +2151,21 @@ async function loadAlliance(value) {
     state.targetLoadingPlayerIds = new Set();
     state.expandedBuildingPlayerIds = new Set();
     state.activePlayerDetailModes = new Map();
-    state.collapsedBuildingCastleKeys = new Set();
+    state.openBuildingCastleKeys = new Set();
+    state.activeCastleDetailTabs = new Map();
+    state.activeCastleLayoutModes = new Map();
+    state.castleLayoutGoals = new Map();
+    state.castleLayoutPlans = new Map();
+    state.castleLayoutExcludedKeys = new Map();
+    state.castleLayoutPinnedItems = new Map();
+    state.castleLayoutBlockedRects = new Map();
+    state.castleLayoutBlockModeKeys = new Set();
+    state.castleLayoutDragPayload = null;
+    state.castleLayoutBlockSelection = null;
+    state.castleLayoutOptimizeModes = new Map();
+    state.castleLayoutGeneratingKeys = new Set();
+    state.castleLayoutGenerateProgress = new Map();
+    state.castleLayoutGenerateCancelTokens = new Map();
     state.openTargetCastleKeys = new Set();
     state.openPublicOrderCastleKeys = new Set();
     state.openConstructionItemCastleKeys = new Set();
@@ -2329,6 +2372,20 @@ function renderRosterTable() {
     });
   });
 
+  elements.playersTable.querySelectorAll("[data-castle-detail-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setCastleDetailTab(button.dataset.castleDetailTab, button.dataset.castleDetailView);
+    });
+  });
+
+  elements.playersTable.querySelectorAll("[data-castle-layout-mode]").forEach((button) => {
+    button.addEventListener("click", () => {
+      setCastleLayoutMode(button.dataset.castleLayoutMode, button.dataset.castleLayoutView);
+    });
+  });
+
+  bindCastleLayoutControls(elements.playersTable);
+
   elements.playersTable.querySelectorAll("[data-target-castle-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       toggleTargetCastleDetails(button.dataset.targetCastleToggle);
@@ -2344,6 +2401,103 @@ function renderRosterTable() {
   elements.playersTable.querySelectorAll("[data-construction-item-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       toggleConstructionItemDetails(button.dataset.constructionItemToggle);
+    });
+  });
+}
+
+function bindCastleLayoutControls(root = elements.playersTable) {
+  root.querySelectorAll("[data-castle-layout-generate]").forEach((button) => {
+    button.addEventListener("click", () => {
+      void handleCastleLayoutGenerate(button.dataset.castleLayoutGenerate);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-cancel]").forEach((button) => {
+    button.addEventListener("click", () => {
+      cancelCastleLayoutGenerate(button.dataset.castleLayoutCancel);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-optimize-mode]").forEach((input) => {
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        setCastleLayoutOptimizeMode(input.dataset.castleLayoutOptimizeMode, input.dataset.castleLayoutOptimizeValue);
+      }
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-goal-toggle]").forEach((input) => {
+    input.addEventListener("change", () => {
+      setCastleLayoutGoalEnabled(input.dataset.castleLayoutGoalToggle);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-block-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleCastleLayoutBlockMode(button.dataset.castleLayoutBlockToggle);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-block-clear]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearCastleLayoutBlockedRects(button.dataset.castleLayoutBlockClear);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-block-remove]").forEach((button) => {
+    button.addEventListener("click", () => {
+      removeCastleLayoutBlockedRect(button.dataset.castleLayoutBlockRemove, button.dataset.castleLayoutBlockIndex);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-exclude]").forEach((button) => {
+    button.addEventListener("click", () => {
+      toggleCastleLayoutExclusion(button.dataset.castleLayoutExclude, button.dataset.castleLayoutItemKey);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-drag]").forEach((item) => {
+    item.addEventListener("dragstart", (event) => {
+      handleCastleLayoutDragStart(event, item.dataset.castleLayoutDrag, item.dataset.castleLayoutItemKey);
+    });
+    item.addEventListener("dragend", () => {
+      clearCastleLayoutDragPreview();
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-dropzone]").forEach((stage) => {
+    stage.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      updateCastleLayoutDropPreview(event, stage, stage.dataset.castleLayoutDropzone);
+    });
+    stage.addEventListener("dragleave", (event) => {
+      if (!stage.contains(event.relatedTarget)) clearCastleLayoutDropPreview(stage);
+    });
+    stage.addEventListener("drop", (event) => {
+      clearCastleLayoutDropPreview(stage);
+      handleCastleLayoutDrop(event, stage.dataset.castleLayoutDropzone);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-block-stage]").forEach((stage) => {
+    stage.addEventListener("pointerdown", (event) => {
+      handleCastleLayoutBlockPointerDown(event, stage, stage.dataset.castleLayoutBlockStage);
+    });
+    stage.addEventListener("pointermove", (event) => {
+      handleCastleLayoutBlockPointerMove(event, stage, stage.dataset.castleLayoutBlockStage);
+    });
+    stage.addEventListener("pointerup", (event) => {
+      handleCastleLayoutBlockPointerUp(event, stage, stage.dataset.castleLayoutBlockStage);
+    });
+    stage.addEventListener("pointercancel", () => {
+      clearCastleLayoutBlockSelection(stage);
+    });
+  });
+
+  root.querySelectorAll("[data-castle-layout-unpin]").forEach((button) => {
+    button.addEventListener("click", () => {
+      removeCastleLayoutPinnedItem(button.dataset.castleLayoutUnpin, button.dataset.castleLayoutItemKey);
     });
   });
 }
@@ -2671,12 +2825,626 @@ function togglePlayerBuildingDetails(playerKey) {
 
 function toggleCastleBuildingDetails(castleKey) {
   if (!castleKey) return;
-  if (state.collapsedBuildingCastleKeys.has(castleKey)) {
-    state.collapsedBuildingCastleKeys.delete(castleKey);
+  if (state.openBuildingCastleKeys.has(castleKey)) {
+    state.openBuildingCastleKeys.delete(castleKey);
   } else {
-    state.collapsedBuildingCastleKeys.add(castleKey);
+    state.openBuildingCastleKeys.add(castleKey);
   }
   renderRosterTable();
+}
+
+function setCastleDetailTab(castleKey, tab) {
+  if (!castleKey || !["buildings", "overview"].includes(tab)) return;
+  state.activeCastleDetailTabs.set(castleKey, tab);
+  renderRosterTable();
+}
+
+function setCastleLayoutMode(castleKey, mode) {
+  if (!castleKey || !["overview", "rearrange"].includes(mode)) return;
+  state.activeCastleLayoutModes.set(castleKey, mode);
+  renderRosterTable();
+}
+
+async function handleCastleLayoutGenerate(castleKey) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  if (state.castleLayoutGeneratingKeys.size > 0) {
+    showToast("Another castle layout is already optimizing.");
+    return;
+  }
+  const goal = getCastleLayoutGoalFromPanel(castleKey);
+  state.castleLayoutGoals.set(castleKey, goal);
+  const activeGoals = getActiveCastleLayoutGoals(goal);
+  if (activeGoals.length === 0) {
+    showToast("Turn on at least one priority dimension before rearranging.");
+    refreshCastleLayoutPanel(castleKey);
+    return;
+  }
+
+  const group = getCastleLayoutGroupByKey(castleKey);
+  const items = group ? getCastleLayoutItems(group) : [];
+  if (items.length === 0) {
+    showToast("No placed buildings are available for this castle layout.");
+    return;
+  }
+
+  const optimizeMode = getCastleLayoutOptimizeMode(castleKey);
+  const optimizeConfig = getCastleLayoutOptimizeConfig(optimizeMode);
+  const runId = state.castleLayoutGenerateRunId + 1;
+  const cancelToken = { cancelled: false };
+  state.castleLayoutGenerateRunId = runId;
+  state.castleLayoutGeneratingKeys.add(castleKey);
+  state.castleLayoutGenerateCancelTokens.set(castleKey, cancelToken);
+  setCastleLayoutGenerateProgress(castleKey, {
+    percent: 3,
+    status: `Preparing ${optimizeConfig.actionLabel.toLowerCase()}...`,
+    detail: "Reading included buildings, pins, and blocked territory",
+    optimizeMode,
+  });
+  renderRosterTable();
+  await waitForCastleLayoutFrame();
+
+  try {
+    const didGenerate = await setCastleLayoutPlan(castleKey, items, activeGoals, {
+      optimizeMode,
+      isCancelled: () => cancelToken.cancelled,
+      onProgress: (progress) => {
+        if (runId !== state.castleLayoutGenerateRunId || cancelToken.cancelled) return;
+        setCastleLayoutGenerateProgress(castleKey, {
+          ...progress,
+          optimizeMode,
+        });
+      },
+    });
+    if (!didGenerate) {
+      showToast("Include at least one building before rearranging this castle.");
+    }
+  } catch (error) {
+    if (!isCastleLayoutCancelError(error)) {
+      showToast(error.message || "Could not rearrange this castle.");
+    }
+  } finally {
+    if (runId === state.castleLayoutGenerateRunId) {
+      state.castleLayoutGeneratingKeys.delete(castleKey);
+      state.castleLayoutGenerateProgress.delete(castleKey);
+      state.castleLayoutGenerateCancelTokens.delete(castleKey);
+      renderRosterTable();
+    }
+  }
+}
+
+function cancelCastleLayoutGenerate(castleKey) {
+  const cancelToken = state.castleLayoutGenerateCancelTokens.get(castleKey);
+  if (!castleKey || !cancelToken) return;
+  cancelToken.cancelled = true;
+  state.castleLayoutGenerateRunId += 1;
+  state.castleLayoutGeneratingKeys.delete(castleKey);
+  state.castleLayoutGenerateProgress.delete(castleKey);
+  state.castleLayoutGenerateCancelTokens.delete(castleKey);
+  renderRosterTable();
+  showToast("Castle rearrange cancelled.");
+}
+
+function setCastleLayoutOptimizeMode(castleKey, mode) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  state.castleLayoutGoals.set(castleKey, getCastleLayoutGoalFromPanel(castleKey));
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(mode);
+  if (optimizeMode === "light") {
+    state.castleLayoutOptimizeModes.delete(castleKey);
+  } else {
+    state.castleLayoutOptimizeModes.set(castleKey, optimizeMode);
+  }
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function getCastleLayoutOptimizeMode(castleKey) {
+  return normalizeCastleLayoutOptimizeMode(state.castleLayoutOptimizeModes.get(castleKey));
+}
+
+function getCastleLayoutPanel(castleKey) {
+  return [...elements.playersTable.querySelectorAll("[data-castle-layout-panel]")]
+    .find((item) => item.dataset.castleLayoutPanel === castleKey) || null;
+}
+
+function persistCastleLayoutGoalsFromPanel(castleKey) {
+  if (!getCastleLayoutPanel(castleKey)) return;
+  state.castleLayoutGoals.set(castleKey, getCastleLayoutGoalFromPanel(castleKey));
+}
+
+function refreshCastleLayoutPanel(castleKey) {
+  const panel = getCastleLayoutPanel(castleKey);
+  const group = getCastleLayoutGroupByKey(castleKey);
+  if (!panel || !group) {
+    renderRosterTable();
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderCastleLayoutViewer(group, getCastleLayoutMode(castleKey)).trim();
+  const nextPanel = wrapper.firstElementChild;
+  if (!nextPanel) {
+    renderRosterTable();
+    return;
+  }
+
+  panel.replaceWith(nextPanel);
+  bindCastleLayoutControls(nextPanel);
+}
+
+function createCastleLayoutCancelError() {
+  const error = new Error("Castle layout rearrange cancelled.");
+  error.name = "AbortError";
+  return error;
+}
+
+function isCastleLayoutCancelError(error) {
+  return error?.name === "AbortError";
+}
+
+function throwIfCastleLayoutCancelled(options = {}) {
+  if (typeof options.isCancelled === "function" && options.isCancelled()) {
+    throw createCastleLayoutCancelError();
+  }
+}
+
+function getCastleLayoutGoalFromPanel(castleKey) {
+  const panel = getCastleLayoutPanel(castleKey);
+  const rows = [...(panel?.querySelectorAll("[data-castle-layout-goal-row]") || [])];
+  if (rows.length === 0) {
+    const width = parseCastleLayoutGoalValue(panel?.querySelector("[data-castle-layout-goal-width]")?.value);
+    const height = parseCastleLayoutGoalValue(panel?.querySelector("[data-castle-layout-goal-height]")?.value);
+    return width || height
+      ? [{ width: width || 5, height: height || 5, count: "max", countMode: "max" }]
+      : getDefaultCastleLayoutGoals();
+  }
+
+  const goals = rows.map((row) => {
+    const width = parseCastleLayoutGoalValue(row.querySelector("[data-castle-layout-goal-width]")?.value);
+    const height = parseCastleLayoutGoalValue(row.querySelector("[data-castle-layout-goal-height]")?.value);
+    const count = parseCastleLayoutGoalCount(row.querySelector("[data-castle-layout-goal-count]")?.value);
+    const enabled = row.querySelector("[data-castle-layout-goal-toggle]")?.checked !== false;
+    return {
+      width: width || 5,
+      height: height || 5,
+      count: count || 1,
+      enabled,
+    };
+  }).slice(0, 5);
+  return goals.length > 0 ? goals : getDefaultCastleLayoutGoals();
+}
+
+function parseCastleLayoutGoalValue(value) {
+  const number = Math.trunc(Number(value));
+  return Number.isFinite(number) && number > 0 ? clampNumber(number, 1, 80) : null;
+}
+
+function parseCastleLayoutGoalCount(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (text === "max") return "max";
+  const number = Math.trunc(Number(text));
+  return Number.isFinite(number) && number > 0 ? clampNumber(number, 1, 999) : null;
+}
+
+function setCastleLayoutGoalEnabled(castleKey) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  state.castleLayoutGoals.set(castleKey, getCastleLayoutGoalFromPanel(castleKey));
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function isCastleLayoutBlockModeActive(castleKey) {
+  return Boolean(castleKey && state.castleLayoutBlockModeKeys.has(castleKey));
+}
+
+function toggleCastleLayoutBlockMode(castleKey) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  if (state.castleLayoutBlockModeKeys.has(castleKey)) {
+    state.castleLayoutBlockModeKeys.delete(castleKey);
+    clearCastleLayoutBlockSelection();
+  } else {
+    state.castleLayoutBlockModeKeys.add(castleKey);
+  }
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function addCastleLayoutBlockedRect(castleKey, rect) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  const group = getCastleLayoutGroupByKey(castleKey);
+  const items = group ? getCastleLayoutItems(group) : [];
+  if (items.length === 0) return;
+  const bounds = getCastleLayoutBounds(items);
+  const suggestedBounds = { minX: 0, minY: 0, cols: bounds.cols, rows: bounds.rows };
+  const [blockedRect] = normalizeCastleLayoutBlockedRects([rect], suggestedBounds.cols, suggestedBounds.rows);
+  if (!blockedRect) return;
+  const currentRects = getCastleLayoutBlockedRects(castleKey, suggestedBounds);
+  if (currentRects.some((currentRect) => doCastleLayoutRectsOverlap(blockedRect, currentRect))) {
+    showToast("Blocked territory cannot overlap an existing blocked range.");
+    return;
+  }
+  if (doesCastleLayoutBlockOverlapPinned(castleKey, blockedRect, items, suggestedBounds)) {
+    showToast("Blocked territory cannot cover pinned buildings.");
+    return;
+  }
+
+  const nextRects = normalizeCastleLayoutBlockedRects([...currentRects, blockedRect], suggestedBounds.cols, suggestedBounds.rows);
+  if (nextRects.length > 40) {
+    showToast("Clear a few blocked ranges before adding more.");
+    return;
+  }
+  state.castleLayoutBlockedRects.set(castleKey, mergeCastleLayoutBlockedRects(nextRects, suggestedBounds.cols, suggestedBounds.rows));
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function removeCastleLayoutBlockedRect(castleKey, indexValue) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  const index = Math.trunc(Number(indexValue));
+  if (!Number.isFinite(index) || index < 0) return;
+  const currentRects = [...(state.castleLayoutBlockedRects.get(castleKey) || [])];
+  if (index >= currentRects.length) return;
+  currentRects.splice(index, 1);
+  if (currentRects.length > 0) {
+    state.castleLayoutBlockedRects.set(castleKey, currentRects);
+  } else {
+    state.castleLayoutBlockedRects.delete(castleKey);
+  }
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function clearCastleLayoutBlockedRects(castleKey) {
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  if (!state.castleLayoutBlockedRects.has(castleKey)) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  state.castleLayoutBlockedRects.delete(castleKey);
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function doesCastleLayoutBlockOverlapPinned(castleKey, rect, items = null, bounds = null) {
+  const group = items ? null : getCastleLayoutGroupByKey(castleKey);
+  const sourceItems = items || (group ? getCastleLayoutItems(group) : []);
+  if (sourceItems.length === 0) return false;
+  const itemBounds = bounds || getCastleLayoutBounds(sourceItems);
+  const sourceBounds = { minX: 0, minY: 0, cols: itemBounds.cols, rows: itemBounds.rows };
+  const includedItems = getCastleLayoutIncludedItems(castleKey, sourceItems);
+  const pinnedItems = state.castleLayoutPinnedItems.get(castleKey) || new Map();
+  const itemByKey = new Map(includedItems.map((item) => [item.layoutKey, item]));
+  for (const pin of pinnedItems.values()) {
+    const item = itemByKey.get(pin.layoutKey);
+    if (!item) continue;
+    const x = clampNumber(Math.trunc(Number(pin.x) || 0), 0, Math.max(0, sourceBounds.cols - item.width));
+    const y = clampNumber(Math.trunc(Number(pin.y) || 0), 0, Math.max(0, sourceBounds.rows - item.height));
+    if (doCastleLayoutRectsOverlap(rect, { x, y, width: item.width, height: item.height })) return true;
+  }
+  return false;
+}
+
+function toggleCastleLayoutExclusion(castleKey, itemKey) {
+  if (!castleKey || !itemKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  const excludedKeys = new Set(state.castleLayoutExcludedKeys.get(castleKey) || []);
+  if (excludedKeys.has(itemKey)) {
+    excludedKeys.delete(itemKey);
+  } else {
+    excludedKeys.add(itemKey);
+    removeCastleLayoutPinnedItem(castleKey, itemKey, { render: false });
+  }
+  if (excludedKeys.size > 0) {
+    state.castleLayoutExcludedKeys.set(castleKey, excludedKeys);
+  } else {
+    state.castleLayoutExcludedKeys.delete(castleKey);
+  }
+
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function handleCastleLayoutDragStart(event, castleKey, itemKey) {
+  if (!event.dataTransfer || !castleKey || !itemKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  const rect = event.currentTarget.getBoundingClientRect();
+  const width = Math.max(1, Math.trunc(Number(event.currentTarget.dataset.layoutItemWidth) || 1));
+  const height = Math.max(1, Math.trunc(Number(event.currentTarget.dataset.layoutItemHeight) || 1));
+  const offsetX = clampNumber(Math.floor(((event.clientX - rect.left) / Math.max(1, rect.width)) * width), 0, width - 1);
+  const offsetY = clampNumber(Math.floor(((event.clientY - rect.top) / Math.max(1, rect.height)) * height), 0, height - 1);
+  const payload = { castleKey, itemKey, width, height, offsetX, offsetY };
+  state.castleLayoutDragPayload = payload;
+  event.dataTransfer.effectAllowed = "copy";
+  event.dataTransfer.setData("text/plain", JSON.stringify(payload));
+}
+
+function handleCastleLayoutDrop(event, castleKey) {
+  event.preventDefault();
+  if (!castleKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  const payload = getCastleLayoutDragPayload(event);
+  state.castleLayoutDragPayload = null;
+  if (!payload?.itemKey || payload.castleKey !== castleKey) return;
+
+  const snap = getCastleLayoutDropSnap(event, event.currentTarget, payload);
+  if (!snap) return;
+  pinCastleLayoutItem(castleKey, payload.itemKey, snap.x, snap.y);
+}
+
+function getCastleLayoutDragPayload(event) {
+  let payload = state.castleLayoutDragPayload;
+  try {
+    const dataTransferPayload = JSON.parse(event?.dataTransfer?.getData("text/plain") || "");
+    if (dataTransferPayload?.castleKey && dataTransferPayload.itemKey) payload = dataTransferPayload;
+  } catch (error) {
+    payload = state.castleLayoutDragPayload;
+  }
+  if (!payload?.castleKey || !payload.itemKey) return null;
+  return payload;
+}
+
+function getCastleLayoutDropSnap(event, stage, payload) {
+  if (!stage || !payload) return null;
+  const width = Math.max(1, Math.trunc(Number(payload.width) || 1));
+  const height = Math.max(1, Math.trunc(Number(payload.height) || 1));
+  const offsetX = clampNumber(Math.trunc(Number(payload.offsetX) || 0), 0, width - 1);
+  const offsetY = clampNumber(Math.trunc(Number(payload.offsetY) || 0), 0, height - 1);
+  const rect = stage.getBoundingClientRect();
+  const cols = Math.max(1, Math.trunc(Number(stage.dataset.layoutCols) || 1));
+  const rows = Math.max(1, Math.trunc(Number(stage.dataset.layoutRows) || 1));
+  const rawX = Math.floor(((event.clientX - rect.left) / Math.max(1, rect.width)) * cols) - offsetX;
+  const rawY = Math.floor(((event.clientY - rect.top) / Math.max(1, rect.height)) * rows) - offsetY;
+  const x = clampNumber(rawX, 0, Math.max(0, cols - width));
+  const y = clampNumber(rawY, 0, Math.max(0, rows - height));
+  return { x, y, width, height, cols, rows };
+}
+
+function updateCastleLayoutDropPreview(event, stage, castleKey) {
+  const payload = getCastleLayoutDragPayload(event);
+  const preview = stage?.querySelector("[data-castle-layout-drop-preview]");
+  if (!stage || !preview || !payload?.itemKey || payload.castleKey !== castleKey) {
+    clearCastleLayoutDropPreview(stage);
+    return;
+  }
+
+  const snap = getCastleLayoutDropSnap(event, stage, payload);
+  if (!snap) {
+    clearCastleLayoutDropPreview(stage);
+    return;
+  }
+
+  const invalid = doesCastleLayoutPinnedPlacementOverlap(castleKey, payload.itemKey, snap.x, snap.y, snap.width, snap.height);
+  preview.style.setProperty("--drop-left", `${((snap.x / snap.cols) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--drop-top", `${((snap.y / snap.rows) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--drop-width", `${((snap.width / snap.cols) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--drop-height", `${((snap.height / snap.rows) * 100).toFixed(4)}%`);
+  preview.classList.toggle("is-invalid", invalid);
+  stage.classList.add("is-drop-previewing");
+}
+
+function clearCastleLayoutDropPreview(stage = null) {
+  const stages = stage
+    ? [stage]
+    : [...elements.playersTable.querySelectorAll("[data-castle-layout-dropzone]")];
+  stages.forEach((item) => {
+    item.classList.remove("is-drop-previewing");
+    item.querySelector("[data-castle-layout-drop-preview]")?.classList.remove("is-invalid");
+  });
+  if (!stage) state.castleLayoutDragPayload = null;
+}
+
+function handleCastleLayoutBlockPointerDown(event, stage, castleKey) {
+  if (!stage || !castleKey || !isCastleLayoutBlockModeActive(castleKey) || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  if (event.button !== undefined && event.button !== 0) return;
+  if (event.target?.closest?.("[data-castle-layout-unpin], [data-castle-layout-block-remove]")) return;
+  const cell = getCastleLayoutStageCell(event, stage);
+  if (!cell) return;
+  event.preventDefault();
+  clearCastleLayoutDropPreview(stage);
+  state.castleLayoutBlockSelection = {
+    castleKey,
+    pointerId: event.pointerId,
+    startX: cell.x,
+    startY: cell.y,
+    currentX: cell.x,
+    currentY: cell.y,
+    cols: cell.cols,
+    rows: cell.rows,
+  };
+  try {
+    stage.setPointerCapture(event.pointerId);
+  } catch (error) {
+    // Pointer capture can fail if the browser has already released it.
+  }
+  updateCastleLayoutBlockSelectionPreview(stage);
+}
+
+function handleCastleLayoutBlockPointerMove(event, stage, castleKey) {
+  const selection = state.castleLayoutBlockSelection;
+  if (!selection || selection.castleKey !== castleKey || selection.pointerId !== event.pointerId) return;
+  const cell = getCastleLayoutStageCell(event, stage);
+  if (!cell) return;
+  event.preventDefault();
+  selection.currentX = cell.x;
+  selection.currentY = cell.y;
+  updateCastleLayoutBlockSelectionPreview(stage);
+}
+
+function handleCastleLayoutBlockPointerUp(event, stage, castleKey) {
+  const selection = state.castleLayoutBlockSelection;
+  if (!selection || selection.castleKey !== castleKey || selection.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const rect = getCastleLayoutBlockSelectionRect(selection);
+  try {
+    stage.releasePointerCapture(event.pointerId);
+  } catch (error) {
+    // Pointer capture may already be released by the browser.
+  }
+  clearCastleLayoutBlockSelection(stage);
+  if (rect) addCastleLayoutBlockedRect(castleKey, rect);
+}
+
+function getCastleLayoutStageCell(event, stage) {
+  if (!stage) return null;
+  const rect = stage.getBoundingClientRect();
+  const cols = Math.max(1, Math.trunc(Number(stage.dataset.layoutCols) || 1));
+  const rows = Math.max(1, Math.trunc(Number(stage.dataset.layoutRows) || 1));
+  const x = clampNumber(Math.floor(((event.clientX - rect.left) / Math.max(1, rect.width)) * cols), 0, cols - 1);
+  const y = clampNumber(Math.floor(((event.clientY - rect.top) / Math.max(1, rect.height)) * rows), 0, rows - 1);
+  return { x, y, cols, rows };
+}
+
+function getCastleLayoutBlockSelectionRect(selection) {
+  if (!selection) return null;
+  const x = Math.min(selection.startX, selection.currentX);
+  const y = Math.min(selection.startY, selection.currentY);
+  const width = Math.abs(selection.currentX - selection.startX) + 1;
+  const height = Math.abs(selection.currentY - selection.startY) + 1;
+  return normalizeCastleLayoutBlockedRects([{ x, y, width, height }], selection.cols, selection.rows)[0] || null;
+}
+
+function updateCastleLayoutBlockSelectionPreview(stage) {
+  const selection = state.castleLayoutBlockSelection;
+  const preview = stage?.querySelector("[data-castle-layout-block-selection]");
+  const rect = getCastleLayoutBlockSelectionRect(selection);
+  if (!stage || !preview || !selection || !rect) {
+    clearCastleLayoutBlockSelection(stage);
+    return;
+  }
+  preview.style.setProperty("--block-select-left", `${((rect.x / selection.cols) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--block-select-top", `${((rect.y / selection.rows) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--block-select-width", `${((rect.width / selection.cols) * 100).toFixed(4)}%`);
+  preview.style.setProperty("--block-select-height", `${((rect.height / selection.rows) * 100).toFixed(4)}%`);
+  stage.classList.add("is-block-selecting");
+}
+
+function clearCastleLayoutBlockSelection(stage = null) {
+  const stages = stage
+    ? [stage]
+    : [...elements.playersTable.querySelectorAll("[data-castle-layout-block-stage]")];
+  stages.forEach((item) => {
+    item.classList.remove("is-block-selecting");
+  });
+  state.castleLayoutBlockSelection = null;
+}
+
+function doesCastleLayoutPinnedPlacementOverlap(castleKey, itemKey, x, y, width, height) {
+  const group = getCastleLayoutGroupByKey(castleKey);
+  const items = group ? getCastleLayoutItems(group) : [];
+  const pinnedItems = new Map(state.castleLayoutPinnedItems.get(castleKey) || []);
+  const itemByKey = new Map(items.map((candidate) => [candidate.layoutKey, candidate]));
+  const nextRect = { x, y, width, height };
+  const bounds = items.length > 0 ? getCastleLayoutBounds(items) : { cols: width, rows: height };
+  const blockedRects = getCastleLayoutBlockedRects(castleKey, { minX: 0, minY: 0, cols: bounds.cols, rows: bounds.rows });
+  if (blockedRects.some((rect) => doCastleLayoutRectsOverlap(nextRect, rect))) return true;
+  return [...pinnedItems.values()].some((pin) => {
+    if (pin.layoutKey === itemKey) return false;
+    const pinnedItem = itemByKey.get(pin.layoutKey);
+    if (!pinnedItem) return false;
+    return doCastleLayoutRectsOverlap(nextRect, {
+      x: pin.x,
+      y: pin.y,
+      width: pinnedItem.width,
+      height: pinnedItem.height,
+    });
+  });
+}
+
+function pinCastleLayoutItem(castleKey, itemKey, x, y) {
+  if (!castleKey || !itemKey) return;
+  persistCastleLayoutGoalsFromPanel(castleKey);
+  const group = getCastleLayoutGroupByKey(castleKey);
+  const items = group ? getCastleLayoutItems(group) : [];
+  const item = items.find((candidate) => candidate.layoutKey === itemKey);
+  if (!item) return;
+
+  const bounds = getCastleLayoutBounds(items);
+  const targetX = clampNumber(Math.trunc(Number(x) || 0), 0, Math.max(0, bounds.cols - item.width));
+  const targetY = clampNumber(Math.trunc(Number(y) || 0), 0, Math.max(0, bounds.rows - item.height));
+  const pinnedItems = new Map(state.castleLayoutPinnedItems.get(castleKey) || []);
+  const invalidPinnedPlacement = doesCastleLayoutPinnedPlacementOverlap(castleKey, itemKey, targetX, targetY, item.width, item.height);
+
+  if (invalidPinnedPlacement) {
+    showToast("Pinned buildings cannot overlap blocked territory or other pins.");
+    return;
+  }
+
+  pinnedItems.set(itemKey, { layoutKey: itemKey, x: targetX, y: targetY });
+  state.castleLayoutPinnedItems.set(castleKey, pinnedItems);
+
+  const excludedKeys = new Set(state.castleLayoutExcludedKeys.get(castleKey) || []);
+  if (excludedKeys.delete(itemKey)) {
+    if (excludedKeys.size > 0) {
+      state.castleLayoutExcludedKeys.set(castleKey, excludedKeys);
+    } else {
+      state.castleLayoutExcludedKeys.delete(castleKey);
+    }
+  }
+
+  state.castleLayoutPlans.delete(castleKey);
+  refreshCastleLayoutPanel(castleKey);
+}
+
+function removeCastleLayoutPinnedItem(castleKey, itemKey, options = {}) {
+  if (!castleKey || !itemKey || state.castleLayoutGeneratingKeys.has(castleKey)) return;
+  if (options.render !== false) persistCastleLayoutGoalsFromPanel(castleKey);
+  const pinnedItems = new Map(state.castleLayoutPinnedItems.get(castleKey) || []);
+  if (!pinnedItems.delete(itemKey)) return;
+  if (pinnedItems.size > 0) {
+    state.castleLayoutPinnedItems.set(castleKey, pinnedItems);
+  } else {
+    state.castleLayoutPinnedItems.delete(castleKey);
+  }
+  state.castleLayoutPlans.delete(castleKey);
+  if (options.render !== false) refreshCastleLayoutPanel(castleKey);
+}
+
+async function setCastleLayoutPlan(castleKey, items, goal, options = {}) {
+  throwIfCastleLayoutCancelled(options);
+  const includedItems = getCastleLayoutIncludedItems(castleKey, items);
+  if (includedItems.length === 0) return false;
+  const bounds = getCastleLayoutBounds(items);
+  const suggestedBounds = { minX: 0, minY: 0, cols: bounds.cols, rows: bounds.rows };
+  const blockedRects = getCastleLayoutBlockedRects(castleKey, suggestedBounds);
+  const pinnedItems = getCastleLayoutPinnedPreviewItems(castleKey, includedItems, suggestedBounds, blockedRects);
+  const plan = await generateCastleLayoutPlanAsync(includedItems, goal, bounds, pinnedItems, {
+    ...options,
+    blockedRects,
+  });
+  throwIfCastleLayoutCancelled(options);
+  plan.originalCount = items.length;
+  plan.excludedCount = items.length - includedItems.length;
+  plan.pinnedCount = pinnedItems.length;
+  plan.blockedRects = blockedRects;
+  plan.blockedCount = blockedRects.length;
+  plan.unplacedItems = getCastleLayoutUnplacedItems(includedItems, plan.items);
+  plan.unplacedCount = plan.unplacedItems.length;
+  plan.placedCount = includedItems.length - plan.unplacedCount;
+  plan.totalCount = includedItems.length;
+  state.castleLayoutPlans.set(castleKey, plan);
+  return true;
+}
+
+function setCastleLayoutGenerateProgress(castleKey, progress) {
+  if (!castleKey) return;
+  const nextProgress = {
+    percent: clampNumber(Number(progress?.percent) || 0, 0, 100),
+    status: String(progress?.status || "Optimizing castle layout..."),
+    detail: String(progress?.detail || ""),
+    optimizeMode: normalizeCastleLayoutOptimizeMode(progress?.optimizeMode),
+  };
+  state.castleLayoutGenerateProgress.set(castleKey, nextProgress);
+  updateCastleLayoutProgressDisplay(castleKey);
+}
+
+function updateCastleLayoutProgressDisplay(castleKey) {
+  const progress = state.castleLayoutGenerateProgress.get(castleKey);
+  const progressNode = [...elements.playersTable.querySelectorAll("[data-castle-layout-progress]")]
+    .find((node) => node.dataset.castleLayoutProgress === castleKey);
+  if (!progress || !progressNode) return;
+  progressNode.outerHTML = renderCastleLayoutProgress(progress, castleKey);
+}
+
+function getCastleLayoutUnplacedItems(includedItems, placedItems) {
+  const placedKeys = new Set((Array.isArray(placedItems) ? placedItems : []).map((item) => item.layoutKey));
+  return includedItems.filter((item) => !placedKeys.has(item.layoutKey));
 }
 
 function toggleTargetCastleDetails(castleKey) {
@@ -2722,12 +3490,13 @@ function renderScoreDetailViews() {
 function renderPlayerBuildingDetailsRow(player) {
   const playerKey = getPlayerKey(player);
   const rows = getBuildingRowsForPlayer(playerKey);
+  const layoutRows = getCachedBuildingRowsForPlayer(playerKey);
   const evaluation = state.targetEvaluations.get(playerKey);
   const mode = getPlayerDetailMode(playerKey);
   const showingTarget = mode === "target" && evaluation;
   const castleSections = showingTarget
     ? evaluation.castles.map((target) => renderTargetCastleSection(target)).join("")
-    : getCastleBuildingGroups(rows, null).map((group) => renderCastleBuildingSection(group)).join("");
+    : getCastleBuildingGroups(rows, null, layoutRows).map((group) => renderCastleBuildingSection(group)).join("");
 
   const scannedCastles = new Set(rows.map((row) => `${row.castleName}|${row.kingdomId}`)).size;
   const foundCount = countPlayerBuildingInstances(rows);
@@ -2906,8 +3675,7 @@ function getScoreInsightTone(score) {
 }
 
 function renderCastleBuildingSection(group) {
-  const collapsed = state.collapsedBuildingCastleKeys.has(group.key);
-  const cards = group.instances.map(({ row, instance }) => renderBuildingInstanceCard(row, instance)).join("");
+  const expanded = state.openBuildingCastleKeys.has(group.key);
   const meta = group.target
     ? `
         <span class="castle-building-section__meta">
@@ -2918,8 +3686,8 @@ function renderCastleBuildingSection(group) {
     : "";
 
   return `
-    <section class="castle-building-section${collapsed ? " is-collapsed" : ""}">
-      <button type="button" class="castle-building-section__header" data-castle-toggle="${escapeHtml(group.key)}" aria-expanded="${!collapsed}">
+    <section class="castle-building-section${expanded ? "" : " is-collapsed"}">
+      <button type="button" class="castle-building-section__header" data-castle-toggle="${escapeHtml(group.key)}" aria-expanded="${expanded}">
         <span class="castle-building-section__icon">
           ${group.castleIconUrl ? `<img src="${escapeHtml(group.castleIconUrl)}" alt="" loading="lazy">` : ""}
         </span>
@@ -2931,15 +3699,2127 @@ function renderCastleBuildingSection(group) {
         <span class="castle-building-section__chevron" aria-hidden="true"></span>
       </button>
       ${
-        collapsed
-          ? ""
-          : `
-            ${group.target ? renderCastleTargetSummary(group.target) : ""}
-            ${cards ? `<div class="building-card-grid">${cards}</div>` : `<div class="building-empty-state">No matching building cards for this castle.</div>`}
-          `
+        expanded ? renderCastleBuildingContent(group) : ""
       }
     </section>
   `;
+}
+
+function renderCastleBuildingContent(group) {
+  const hasLayout = getCastleLayoutItems(group).length > 0;
+  const activeTab = getCastleDetailTab(group.key, hasLayout);
+  const cards = group.instances.map(({ row, instance }) => renderBuildingInstanceCard(row, instance)).join("");
+  const tabContent = activeTab === "overview"
+    ? renderCastleOverviewContent(group, hasLayout)
+    : cards
+      ? `<div class="building-card-grid">${cards}</div>`
+      : `<div class="building-empty-state">No matching building cards for this castle.</div>`;
+
+  return `
+    <div class="castle-detail-panel">
+      ${renderCastleDetailTabs(group, activeTab, hasLayout)}
+      ${group.target ? renderCastleTargetSummary(group.target) : ""}
+      ${tabContent}
+    </div>
+  `;
+}
+
+function getCastleDetailTab(castleKey, hasLayout) {
+  const tab = state.activeCastleDetailTabs.get(castleKey) || "buildings";
+  if (tab === "overview" && !hasLayout) return "buildings";
+  return tab;
+}
+
+function renderCastleDetailTabs(group, activeTab, hasLayout) {
+  return `
+    <div class="castle-detail-tabs" role="tablist" aria-label="${escapeHtml(group.castleName)} detail tabs">
+      <button type="button" class="castle-detail-tab${activeTab === "buildings" ? " is-active" : ""}" data-castle-detail-tab="${escapeHtml(group.key)}" data-castle-detail-view="buildings" aria-selected="${activeTab === "buildings" ? "true" : "false"}">Buildings</button>
+      <button type="button" class="castle-detail-tab${activeTab === "overview" ? " is-active" : ""}" data-castle-detail-tab="${escapeHtml(group.key)}" data-castle-detail-view="overview" aria-selected="${activeTab === "overview" ? "true" : "false"}"${hasLayout ? "" : " disabled"}>Castle overview</button>
+    </div>
+  `;
+}
+
+function renderCastleOverviewContent(group, hasLayout) {
+  if (!hasLayout) {
+    return `<div class="building-empty-state">No placed-building map is available for this castle.</div>`;
+  }
+  const mode = getCastleLayoutMode(group.key);
+  return `
+    <div class="castle-overview-content">
+      ${renderCastleLayoutModeTabs(group, mode)}
+      ${renderCastleLayoutViewer(group, mode)}
+    </div>
+  `;
+}
+
+function getCastleLayoutMode(castleKey) {
+  const mode = state.activeCastleLayoutModes.get(castleKey) || "overview";
+  return mode === "rearrange" ? "rearrange" : "overview";
+}
+
+function renderCastleLayoutModeTabs(group, mode) {
+  return `
+    <div class="castle-layout-mode-tabs" role="tablist" aria-label="${escapeHtml(group.castleName)} castle layout modes">
+      <button type="button" class="castle-layout-mode-tab${mode === "overview" ? " is-active" : ""}" data-castle-layout-mode="${escapeHtml(group.key)}" data-castle-layout-view="overview" aria-selected="${mode === "overview" ? "true" : "false"}">Castle overview</button>
+      <button type="button" class="castle-layout-mode-tab${mode === "rearrange" ? " is-active" : ""}" data-castle-layout-mode="${escapeHtml(group.key)}" data-castle-layout-view="rearrange" aria-selected="${mode === "rearrange" ? "true" : "false"}">Castle rearrange</button>
+    </div>
+  `;
+}
+
+function renderCastleLayoutViewer(group, mode = "overview") {
+  const items = getCastleLayoutItems(group);
+  if (items.length === 0) return "";
+
+  const rearrangeMode = mode === "rearrange";
+  const bounds = getCastleLayoutBounds(items);
+  const plan = state.castleLayoutPlans.get(group.key);
+  const generationProgress = state.castleLayoutGenerateProgress.get(group.key);
+  const generatingLayout = state.castleLayoutGeneratingKeys.has(group.key);
+  const optimizeMode = getCastleLayoutOptimizeMode(group.key);
+  const goals = getCastleLayoutControlGoals(state.castleLayoutGoals.get(group.key), bounds.cols, bounds.rows);
+  const excludedKeys = getCastleLayoutExcludedKeys(group.key);
+  const editingExclusions = rearrangeMode;
+  const excludedCount = items.filter((item) => excludedKeys.has(item.layoutKey)).length;
+  const includedItems = getCastleLayoutIncludedItems(group.key, items);
+  const suggestedBounds = { minX: 0, minY: 0, cols: bounds.cols, rows: bounds.rows };
+  const blockedRects = getCastleLayoutBlockedRects(group.key, suggestedBounds);
+  const blockActive = isCastleLayoutBlockModeActive(group.key);
+  const pinnedItems = getCastleLayoutPinnedPreviewItems(group.key, includedItems, suggestedBounds, blockedRects);
+  const pinNumbers = getCastleLayoutPinNumbers(group.key, includedItems);
+  const suggestedItems = plan ? plan.items : pinnedItems;
+  const baseSuggestionSubtitle = plan
+    ? getCastleLayoutPlanSubtitle(plan, plan.goals || goals)
+    : pinnedItems.length > 0
+    ? `${pinnedItems.length} pinned ${pinnedItems.length === 1 ? "building" : "buildings"}`
+    : "Drop buildings here to pin their locations";
+  const blockedText = blockedRects.length > 0
+    ? `${blockedRects.length} blocked ${blockedRects.length === 1 ? "range" : "ranges"}`
+    : "";
+  const suggestionSubtitle = blockedText ? `${baseSuggestionSubtitle}; ${blockedText}` : baseSuggestionSubtitle;
+  const buildingText = `${items.length} placed ${items.length === 1 ? "building" : "buildings"}`;
+  const gridText = `${bounds.cols} x ${bounds.rows} grid`;
+  const excludeText = editingExclusions
+    ? "Select buildings to exclude from the suggestion"
+    : excludedCount > 0
+    ? `${excludedCount} excluded from suggestion`
+    : "All scanned buildings included in suggestion";
+
+  return `
+    <div class="castle-layout-panel" data-castle-layout-panel="${escapeHtml(group.key)}">
+      <div class="castle-layout-panel__header">
+        <div>
+          <span class="label">Castle layout</span>
+          <strong>${escapeHtml(buildingText)}</strong>
+          <span>${escapeHtml(gridText)} from scanned building positions</span>
+          <span>${escapeHtml(excludeText)}</span>
+        </div>
+        ${rearrangeMode ? renderCastleLayoutControls(group, goals, { optimizeMode, generating: generatingLayout, blockActive, blockCount: blockedRects.length }) : ""}
+      </div>
+      ${rearrangeMode && generationProgress ? renderCastleLayoutProgress(generationProgress, group.key) : ""}
+      ${rearrangeMode && plan ? renderCastleLayoutPlanSummary(plan, plan.goals || goals) : ""}
+      <div class="castle-layout-boards${rearrangeMode ? " has-plan" : ""}">
+        ${renderCastleLayoutBoard("Original scan", rearrangeMode ? editingExclusions ? "Select buildings to omit from suggestion" : "Current placed-building map" : "", items, bounds, `${group.castleName} scanned castle layout`, { selectable: editingExclusions, draggable: rearrangeMode, castleKey: group.key, excludedKeys, pinNumbers })}
+        ${rearrangeMode ? renderCastleLayoutBoard("Suggested layout", suggestionSubtitle, suggestedItems, plan?.bounds || suggestedBounds, `${group.castleName} rearranged castle layout`, { highlights: plan ? getCastleLayoutHighlightRects(plan, plan.goals || goals) : [], dropzone: true, castleKey: group.key, pinNumbers, removablePins: true, blockedRects, blockActive, generating: generatingLayout }) : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderCastleLayoutControls(group, goals, options = {}) {
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(options.optimizeMode);
+  const generating = Boolean(options.generating);
+  const blockActive = Boolean(options.blockActive);
+  const blockCount = Math.max(0, Math.trunc(Number(options.blockCount) || 0));
+  const hasActiveGoals = goals.some((goal) => goal.enabled !== false);
+  const activeGoalCount = goals.filter((goal) => goal.enabled !== false).length;
+  return `
+    <div class="castle-layout-controls castle-layout-controls--multi" aria-label="Rearrange castle controls">
+      <div class="castle-layout-config">
+        <div class="castle-layout-config__title">
+          <span>Open spaces</span>
+          <strong>${activeGoalCount}/${goals.length} active</strong>
+        </div>
+        <div class="castle-layout-goals" aria-label="Open space priority targets">
+          <div class="castle-layout-goal-row castle-layout-goal-row--header" aria-hidden="true">
+            <span>#</span>
+            <span>Use</span>
+            <span>W</span>
+            <span></span>
+            <span>H</span>
+            <span>Spots</span>
+          </div>
+          ${goals.map((goal, index) => renderCastleLayoutGoalRow(group.key, goal, index, { disabled: generating })).join("")}
+        </div>
+      </div>
+      <div class="castle-layout-actions">
+        ${renderCastleLayoutOptimizeModeControl(group.key, optimizeMode, generating)}
+        <button type="button" class="castle-layout-controls__block${blockActive ? " is-active" : ""}" data-castle-layout-block-toggle="${escapeHtml(group.key)}" aria-pressed="${blockActive ? "true" : "false"}"${generating ? " disabled" : ""} title="Block territory on the suggested layout">Block</button>
+        ${blockCount > 0 ? `<button type="button" class="castle-layout-controls__clear-blocks" data-castle-layout-block-clear="${escapeHtml(group.key)}"${generating ? " disabled" : ""}>Clear blocks</button>` : ""}
+        <button type="button" data-castle-layout-generate="${escapeHtml(group.key)}"${generating || !hasActiveGoals ? " disabled" : ""}>${generating ? "Optimizing..." : "Rearrange"}</button>
+        ${generating ? `<button type="button" class="castle-layout-controls__cancel" data-castle-layout-cancel="${escapeHtml(group.key)}">Cancel</button>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderCastleLayoutOptimizeModeControl(castleKey, optimizeMode, disabled = false) {
+  const currentMode = normalizeCastleLayoutOptimizeMode(optimizeMode);
+  const options = [
+    { value: "light", label: "Light" },
+    { value: "deep", label: "Deep" },
+    { value: "extreme", label: "Extreme" },
+  ];
+  return `
+    <div class="castle-layout-optimizer-segment" role="radiogroup" aria-label="Optimization strength">
+      ${options.map((option) => `
+        <label class="${option.value === currentMode ? "is-active" : ""}">
+          <input type="radio" name="castle-layout-optimizer-${escapeHtml(castleKey)}" data-castle-layout-optimize-mode="${escapeHtml(castleKey)}" data-castle-layout-optimize-value="${option.value}"${option.value === currentMode ? " checked" : ""}${disabled ? " disabled" : ""}>
+          <span>${option.label}</span>
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderCastleLayoutProgress(progress, castleKey) {
+  const percent = clampNumber(Number(progress?.percent) || 0, 3, 100);
+  const status = progress?.status || "Optimizing castle layout...";
+  const detail = progress?.detail || "Exploring rearrange candidates";
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(progress?.optimizeMode);
+  const mode = getCastleLayoutOptimizeConfig(optimizeMode).progressLabel;
+  return `
+    <div class="scan-march castle-layout-progress" style="--scan-progress: ${percent.toFixed(2)}%" data-castle-layout-progress="${escapeHtml(castleKey)}" role="status" aria-live="polite">
+      <div class="scan-march__meta">
+        <span class="label">${escapeHtml(mode)}</span>
+        <strong>${escapeHtml(status)}</strong>
+        <small>${escapeHtml(detail)} - ${Math.round(percent)}%</small>
+      </div>
+      <div class="scan-march__field" aria-hidden="true">
+        <div class="scan-march__castle scan-march__castle--home">
+          <img src="../gge-tracker/gge-tracker-frontend/src/assets/castle1.png" alt="">
+        </div>
+        <div class="scan-march__path">
+          <span class="scan-march__arrow"></span>
+          <span class="scan-march__army">
+            <img src="../gge-tracker/gge-tracker-frontend/src/assets/troop.png" alt="">
+          </span>
+        </div>
+        <div class="scan-march__castle scan-march__castle--target">
+          <img src="../gge-tracker/gge-tracker-frontend/src/assets/castle4.png" alt="">
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderCastleLayoutGoalRow(castleKey, goal, index, options = {}) {
+  const disabled = Boolean(options.disabled);
+  const enabled = goal.enabled !== false;
+  return `
+    <div class="castle-layout-goal-row${enabled ? "" : " is-disabled"}" data-castle-layout-goal-row>
+      <span class="castle-layout-goal-row__priority">${index + 1}</span>
+      <label class="castle-layout-goal-row__toggle">
+        <span>Use</span>
+        <input type="checkbox" data-castle-layout-goal-toggle="${escapeHtml(castleKey)}" aria-label="Use priority ${index + 1}"${enabled ? " checked" : ""}${disabled ? " disabled" : ""}>
+      </label>
+      <label>
+        <span>Width</span>
+        <input type="number" min="1" max="80" step="1" value="${escapeHtml(String(goal.width))}" data-castle-layout-goal-width aria-label="Priority ${index + 1} open space width"${disabled ? " disabled" : ""}>
+      </label>
+      <span class="castle-layout-controls__separator">x</span>
+      <label>
+        <span>Height</span>
+        <input type="number" min="1" max="80" step="1" value="${escapeHtml(String(goal.height))}" data-castle-layout-goal-height aria-label="Priority ${index + 1} open space height"${disabled ? " disabled" : ""}>
+      </label>
+      <label>
+        <span>Spots</span>
+        <input type="text" value="${escapeHtml(formatCastleLayoutGoalCountValue(goal))}" placeholder="1 or max" data-castle-layout-goal-count aria-label="Priority ${index + 1} desired spots, number or max"${disabled ? " disabled" : ""}>
+      </label>
+    </div>
+  `;
+}
+
+function renderCastleLayoutBoard(title, subtitle, items, bounds, ariaLabel, options = {}) {
+  const highlights = options.highlights || [];
+  const blockedRects = options.blockedRects || [];
+  const dropzone = Boolean(options.dropzone && options.castleKey);
+  const blockActive = Boolean(options.blockActive && dropzone && !options.generating);
+  const stageClasses = `castle-layout-stage${dropzone ? " castle-layout-stage--dropzone" : ""}${blockActive ? " is-blocking" : ""}`;
+  const dropAttributes = dropzone
+    ? `data-castle-layout-dropzone="${escapeHtml(options.castleKey)}"`
+    : "";
+  const blockAttributes = dropzone
+    ? `data-castle-layout-block-stage="${escapeHtml(options.castleKey)}"`
+    : "";
+  return `
+    <div class="castle-layout-board">
+      <div class="castle-layout-board__header">
+        <strong>${escapeHtml(title)}</strong>
+        <span>${escapeHtml(subtitle)}</span>
+      </div>
+      <div class="${stageClasses}" style="--layout-cols:${bounds.cols}; --layout-rows:${bounds.rows};" data-layout-cols="${bounds.cols}" data-layout-rows="${bounds.rows}" ${dropAttributes} ${blockAttributes} aria-label="${escapeHtml(ariaLabel)}">
+        ${highlights.map((rect) => renderCastleLayoutOpenSpace(rect, bounds)).join("")}
+        ${blockedRects.map((rect, index) => renderCastleLayoutBlockedSpace(rect, bounds, index, options)).join("")}
+        ${items.map((item) => renderCastleLayoutItem(item, bounds, options)).join("")}
+        ${dropzone ? `<span class="castle-layout-drop-preview" data-castle-layout-drop-preview aria-hidden="true"></span>` : ""}
+        ${dropzone ? `<span class="castle-layout-block-selection" data-castle-layout-block-selection aria-hidden="true"></span>` : ""}
+      </div>
+    </div>
+  `;
+}
+
+function renderCastleLayoutOpenSpace(rect, bounds) {
+  const left = ((rect.x - bounds.minX) / bounds.cols) * 100;
+  const top = ((rect.y - bounds.minY) / bounds.rows) * 100;
+  const width = (rect.width / bounds.cols) * 100;
+  const height = (rect.height / bounds.rows) * 100;
+  const label = `${rect.priority ? `Priority ${rect.priority}: ` : ""}Open ${rect.width} by ${rect.height} target space at ${rect.x}, ${rect.y}`;
+  return `
+    <span class="castle-layout-open-space" style="--space-left:${left.toFixed(4)}%; --space-top:${top.toFixed(4)}%; --space-width:${width.toFixed(4)}%; --space-height:${height.toFixed(4)}%;" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>
+  `;
+}
+
+function renderCastleLayoutBlockedSpace(rect, bounds, index, options = {}) {
+  const left = ((rect.x - bounds.minX) / bounds.cols) * 100;
+  const top = ((rect.y - bounds.minY) / bounds.rows) * 100;
+  const width = (rect.width / bounds.cols) * 100;
+  const height = (rect.height / bounds.rows) * 100;
+  const label = `Blocked ${rect.width} by ${rect.height} territory at ${rect.x}, ${rect.y}`;
+  const style = `--block-left:${left.toFixed(4)}%; --block-top:${top.toFixed(4)}%; --block-width:${width.toFixed(4)}%; --block-height:${height.toFixed(4)}%;`;
+  if (!options.castleKey || options.generating) {
+    return `<span class="castle-layout-blocked-space" style="${style}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"></span>`;
+  }
+  return `
+    <span class="castle-layout-blocked-space castle-layout-blocked-space--removable" style="${style}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
+      <button type="button" class="castle-layout-item__pin-remove castle-layout-blocked-space__remove" data-castle-layout-block-remove="${escapeHtml(options.castleKey)}" data-castle-layout-block-index="${index}" aria-label="Remove ${escapeHtml(label)}">x</button>
+    </span>
+  `;
+}
+
+function getCastleLayoutHighlightRects(plan, goals) {
+  const goalRects = Array.isArray(plan.goalRects) ? plan.goalRects : [];
+  if (goalRects.length > 0) return goalRects;
+  if (!Array.isArray(plan.items) || !plan.bounds) return [];
+  const cols = Math.max(1, Math.trunc(plan.bounds.cols || 1));
+  const rows = Math.max(1, Math.trunc(plan.bounds.rows || 1));
+  const grid = buildCastleLayoutOccupancy(plan.items, cols, rows, plan.blockedRects);
+  return evaluateCastleLayoutGoals(grid, cols, rows, normalizeCastleLayoutGoals(goals, cols, rows)).rects;
+}
+
+function renderCastleLayoutPlanSummary(plan, goals) {
+  const results = Array.isArray(plan.goalResults) ? plan.goalResults : [];
+  const unplacedItems = Array.isArray(plan.unplacedItems) ? plan.unplacedItems : [];
+  const unplacedCount = Math.max(0, Math.trunc(Number(plan.unplacedCount ?? unplacedItems.length) || 0));
+  const resultText = results
+    .filter((result) => result.found > 0 || result.priority <= 3)
+    .slice(0, 5)
+    .map((result) => `${result.found}${result.countMode === "max" ? "" : `/${result.count}`} open ${result.width} x ${result.height}${result.countMode === "max" ? " (max)" : ""}`)
+    .join("; ");
+  const exactText = plan.goalSpaces > 0
+    ? `Found ${resultText}`
+    : `Best open space is ${plan.largestEmpty.width} x ${plan.largestEmpty.height}`;
+  const tone = plan.goalSpaces > 0 && results.length > 0 && results.every((result) => result.countMode === "max" || result.found >= result.count)
+    ? "success"
+    : "partial";
+  const excludedText = plan.excludedCount > 0 ? `; ${plan.excludedCount} excluded` : "";
+  const placedCount = Math.max(0, Math.trunc(Number(plan.placedCount) || 0));
+  const totalCount = Math.max(0, Math.trunc(Number(plan.totalCount) || 0));
+  const summaryTone = unplacedCount > 0 ? "warning" : tone;
+  const blockedCount = Math.max(0, Math.trunc(Number(plan.blockedCount) || 0));
+  const blockedText = blockedCount > 0 ? `; ${blockedCount} blocked ${blockedCount === 1 ? "range" : "ranges"}` : "";
+  return `
+    <div class="castle-layout-plan-summary castle-layout-plan-summary--${summaryTone}">
+      <div class="castle-layout-plan-summary__main">
+        <strong>${escapeHtml(exactText)}</strong>
+        <span>${placedCount}/${totalCount} included buildings placed${escapeHtml(unplacedCount > 0 ? `; ${unplacedCount} unplaced` : "")}${escapeHtml(excludedText)}${escapeHtml(blockedText)}</span>
+      </div>
+      ${unplacedCount > 0 ? `
+        <div class="castle-layout-unplaced">
+          <strong>${escapeHtml(`${unplacedCount} ${unplacedCount === 1 ? "building" : "buildings"} could not be placed`)}</strong>
+          <span>${escapeHtml(formatCastleLayoutUnplacedItems(unplacedItems))}</span>
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+function formatCastleLayoutUnplacedItems(items) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const name = item.name || "Building";
+    const level = Math.max(0, Math.trunc(Number(item.level) || 0));
+    const width = Math.max(1, Math.trunc(Number(item.width) || 1));
+    const height = Math.max(1, Math.trunc(Number(item.height) || 1));
+    const key = `${name}|${level}|${width}|${height}`;
+    const group = groups.get(key) || { name, level, width, height, count: 0 };
+    group.count += 1;
+    groups.set(key, group);
+  });
+  return [...groups.values()]
+    .map((group) => {
+      const levelText = group.level > 0 ? ` L${group.level}` : "";
+      const countText = group.count > 1 ? `${group.count} x ` : "";
+      return `${countText}${group.name}${levelText} (${group.width} x ${group.height})`;
+    })
+    .join("; ");
+}
+
+function getCastleLayoutPlanSubtitle(plan, goals) {
+  const unplacedCount = Math.max(0, Math.trunc(Number(plan.unplacedCount) || 0));
+  if (unplacedCount > 0) {
+    return `${unplacedCount} unplaced; closest open area: ${plan.largestEmpty.width} x ${plan.largestEmpty.height}`;
+  }
+  if (plan.goalSpaces > 0) {
+    return `${plan.goalSpaces} prioritized open ${plan.goalSpaces === 1 ? "space" : "spaces"}`;
+  }
+  return `Closest open area: ${plan.largestEmpty.width} x ${plan.largestEmpty.height}`;
+}
+
+function renderCastleLayoutItem(item, bounds, options = {}) {
+  const left = ((item.x - bounds.minX) / bounds.cols) * 100;
+  const top = ((item.y - bounds.minY) / bounds.rows) * 100;
+  const width = (item.width / bounds.cols) * 100;
+  const height = (item.height / bounds.rows) * 100;
+  const selectable = Boolean(options.selectable && options.castleKey && item.layoutKey);
+  const excluded = Boolean(selectable && options.excludedKeys?.has(item.layoutKey));
+  const pinNumber = Number(options.pinNumbers?.get(item.layoutKey) || item.pinnedIndex || 0);
+  const pinned = pinNumber > 0;
+  const draggable = Boolean(options.draggable && options.castleKey && item.layoutKey && !excluded);
+  const removablePin = Boolean(options.removablePins && options.castleKey && item.layoutKey && pinned);
+  const actionText = selectable
+    ? excluded ? "Excluded from suggestion. Click to include." : "Included in suggestion. Click to exclude."
+    : "";
+  const pinText = pinned ? ` Pinned as ${pinNumber}.` : "";
+  const label = `${item.name}, level ${item.level || "-"}, ${item.width} by ${item.height}${item.rotated ? ", rotated" : ""}, at ${item.x}, ${item.y}.${pinText}${actionText ? ` ${actionText}` : ""}`;
+  const asset = item.iconUrl
+    ? `<img src="${escapeHtml(item.iconUrl)}" alt="" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><span class="castle-layout-item__fallback" hidden>?</span>`
+    : `<span class="castle-layout-item__fallback">?</span>`;
+  const tag = selectable ? "button" : "span";
+  const attributes = [
+    selectable
+    ? `type="button" data-castle-layout-exclude="${escapeHtml(options.castleKey)}" data-castle-layout-item-key="${escapeHtml(item.layoutKey)}" aria-pressed="${excluded ? "true" : "false"}"`
+    : "",
+    draggable
+      ? `draggable="true" data-castle-layout-drag="${escapeHtml(options.castleKey)}" data-castle-layout-item-key="${escapeHtml(item.layoutKey)}" data-layout-item-width="${item.width}" data-layout-item-height="${item.height}"`
+      : "",
+  ].filter(Boolean).join(" ");
+  const classNames = [
+    "castle-layout-item",
+    `castle-layout-item--${escapeHtml(item.tone)}`,
+    selectable ? "castle-layout-item--selectable" : "",
+    draggable ? "castle-layout-item--draggable" : "",
+    excluded ? "is-excluded" : "",
+    pinned ? "is-pinned" : "",
+  ].filter(Boolean).join(" ");
+
+  return `
+    <${tag} ${attributes} class="${classNames}" style="--item-left:${left.toFixed(4)}%; --item-top:${top.toFixed(4)}%; --item-width:${width.toFixed(4)}%; --item-height:${height.toFixed(4)}%; --asset-scale:${item.assetScale.toFixed(4)}%;" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}">
+      ${asset}
+      ${selectable ? `<span class="castle-layout-item__exclude-mark" aria-hidden="true"></span>` : ""}
+      ${pinned ? `<span class="castle-layout-item__pin-badge" aria-hidden="true">${pinNumber}</span>` : ""}
+      ${removablePin ? `<button type="button" class="castle-layout-item__pin-remove" data-castle-layout-unpin="${escapeHtml(options.castleKey)}" data-castle-layout-item-key="${escapeHtml(item.layoutKey)}" aria-label="Remove pinned placement ${pinNumber}">x</button>` : ""}
+    </${tag}>
+  `;
+}
+
+function getCastleLayoutItems(group) {
+  const rows = Array.isArray(group.layoutRows) && group.layoutRows.length > 0
+    ? group.layoutRows
+    : group.instances.map(({ row }) => row);
+  const seen = new Set();
+  return rows.flatMap((row) => {
+    return (Array.isArray(row.instances) ? row.instances : []).map((instance) => {
+      const item = state.buildingItemByWod.get(Number(instance.wodID)) || {};
+      const x = parseCastleLayoutCoordinate(instance.positionX);
+      const y = parseCastleLayoutCoordinate(instance.positionY);
+      if (x === null || y === null) return null;
+      if (isUnknownCastleLayoutPosition(x, y)) return null;
+      const baseWidth = getLayoutDimension(instance.width, item.width);
+      const baseHeight = getLayoutDimension(instance.height, item.height);
+      const rotated = isRotatedCastleLayoutItem(instance.rotation);
+      const width = rotated ? baseHeight : baseWidth;
+      const height = rotated ? baseWidth : baseHeight;
+      const key = String(instance.objectID || `${row.buildingKey}|${x}|${y}|${instance.wodID}`);
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        layoutKey: key,
+        x,
+        y,
+        width,
+        height,
+        rotated,
+        assetScale: getCastleLayoutAssetScale(width, height),
+        level: Number(instance.level || item.level || 0),
+        name: row.buildingName || formatBuildingName(item.name, item.group),
+        iconUrl: getBuildingAssetUrl(item) || row.buildingIconUrl,
+        tone: getCastleLayoutTone(row.buildingGroup || item.group),
+      };
+    });
+  }).filter(Boolean).sort((a, b) => {
+    if (a.y !== b.y) return a.y - b.y;
+    if (a.x !== b.x) return a.x - b.x;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function getCastleLayoutGroupByKey(castleKey) {
+  const rows = state.buildingScanRows.filter((row) => getCastleBuildingKey(row) === castleKey);
+  if (rows.length === 0) return null;
+  const first = rows[0];
+  return {
+    key: castleKey,
+    castleName: first.castleName,
+    castleType: first.castleType,
+    castleIconUrl: first.castleIconUrl,
+    kingdomId: first.kingdomId,
+    displayIndex: first.displayIndex,
+    instances: [],
+    layoutRows: rows,
+  };
+}
+
+function getCastleLayoutExcludedKeys(castleKey) {
+  return state.castleLayoutExcludedKeys.get(castleKey) || new Set();
+}
+
+function getCastleLayoutBlockedRects(castleKey, bounds = null) {
+  const rects = state.castleLayoutBlockedRects.get(castleKey) || [];
+  if (!bounds) return rects;
+  return normalizeCastleLayoutBlockedRects(rects, bounds.cols, bounds.rows);
+}
+
+function normalizeCastleLayoutBlockedRects(value, cols = 80, rows = 80) {
+  if (!value) return [];
+  const values = Array.isArray(value) ? value : [value];
+  const maxCols = Math.max(1, Math.trunc(Number(cols) || 1));
+  const maxRows = Math.max(1, Math.trunc(Number(rows) || 1));
+  const rects = [];
+  const seen = new Set();
+
+  values.forEach((rect) => {
+    const x = clampNumber(Math.trunc(Number(rect?.x) || 0), 0, maxCols - 1);
+    const y = clampNumber(Math.trunc(Number(rect?.y) || 0), 0, maxRows - 1);
+    const width = clampNumber(Math.trunc(Number(rect?.width) || 1), 1, maxCols - x);
+    const height = clampNumber(Math.trunc(Number(rect?.height) || 1), 1, maxRows - y);
+    const key = `${x}|${y}|${width}|${height}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    rects.push({ x, y, width, height });
+  });
+
+  return rects;
+}
+
+function mergeCastleLayoutBlockedRects(rects, cols = 80, rows = 80) {
+  let merged = normalizeCastleLayoutBlockedRects(rects, cols, rows).sort((a, b) => a.y - b.y || a.x - b.x || b.width * b.height - a.width * a.height);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    const next = [];
+    const used = new Set();
+    for (let index = 0; index < merged.length; index += 1) {
+      if (used.has(index)) continue;
+      let current = merged[index];
+      for (let otherIndex = index + 1; otherIndex < merged.length; otherIndex += 1) {
+        if (used.has(otherIndex)) continue;
+        const other = merged[otherIndex];
+        const sameRows = current.y === other.y && current.height === other.height;
+        const sameCols = current.x === other.x && current.width === other.width;
+        const touchesX = sameRows && Math.max(current.x, other.x) <= Math.min(current.x + current.width, other.x + other.width);
+        const touchesY = sameCols && Math.max(current.y, other.y) <= Math.min(current.y + current.height, other.y + other.height);
+        if (!touchesX && !touchesY) continue;
+        current = {
+          x: Math.min(current.x, other.x),
+          y: Math.min(current.y, other.y),
+          width: Math.max(current.x + current.width, other.x + other.width) - Math.min(current.x, other.x),
+          height: Math.max(current.y + current.height, other.y + other.height) - Math.min(current.y, other.y),
+        };
+        used.add(otherIndex);
+        changed = true;
+      }
+      next.push(current);
+    }
+    merged = next;
+  }
+  return merged;
+}
+
+function getCastleLayoutIncludedItems(castleKey, items) {
+  const excludedKeys = getCastleLayoutExcludedKeys(castleKey);
+  return items.filter((item) => !excludedKeys.has(item.layoutKey));
+}
+
+function getCastleLayoutPinNumbers(castleKey, items = []) {
+  const itemKeys = new Set(items.map((item) => item.layoutKey));
+  const pinnedItems = state.castleLayoutPinnedItems.get(castleKey) || new Map();
+  const numbers = new Map();
+  let index = 1;
+  pinnedItems.forEach((pin, layoutKey) => {
+    if (!itemKeys.has(layoutKey)) return;
+    numbers.set(layoutKey, index);
+    index += 1;
+  });
+  return numbers;
+}
+
+function getCastleLayoutPinnedPreviewItems(castleKey, items, bounds, blockedRects = []) {
+  const pinnedItems = state.castleLayoutPinnedItems.get(castleKey) || new Map();
+  if (pinnedItems.size === 0 || items.length === 0) return [];
+  const itemByKey = new Map(items.map((item) => [item.layoutKey, item]));
+  const grid = createCastleLayoutGrid(bounds.cols, bounds.rows);
+  const pinnedPreviewItems = [];
+  let pinnedIndex = 1;
+
+  normalizeCastleLayoutBlockedRects(blockedRects, bounds.cols, bounds.rows).forEach((rect) => {
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+
+  pinnedItems.forEach((pin, layoutKey) => {
+    const item = itemByKey.get(layoutKey);
+    if (!item) return;
+    const x = clampNumber(Math.trunc(Number(pin.x) || 0), 0, Math.max(0, bounds.cols - item.width));
+    const y = clampNumber(Math.trunc(Number(pin.y) || 0), 0, Math.max(0, bounds.rows - item.height));
+    if (!canPlaceCastleLayoutRect(grid, x, y, item.width, item.height)) return;
+    markCastleLayoutRect(grid, x, y, item.width, item.height, true);
+    pinnedPreviewItems.push({
+      ...item,
+      x,
+      y,
+      pinnedIndex,
+      isPinned: true,
+    });
+    pinnedIndex += 1;
+  });
+
+  return pinnedPreviewItems;
+}
+
+function getDefaultCastleLayoutGoals() {
+  return [
+    { width: 5, height: 10, count: "max", countMode: "max", enabled: true },
+    { width: 5, height: 5, count: "max", countMode: "max", enabled: true },
+    { width: 4, height: 4, count: "max", countMode: "max", enabled: true },
+    { width: 3, height: 3, count: "max", countMode: "max", enabled: true },
+    { width: 2, height: 2, count: "max", countMode: "max", enabled: true },
+  ];
+}
+
+function normalizeCastleLayoutGoals(value, cols = 80, rows = 80) {
+  const rawGoals = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.goals)
+      ? value.goals
+      : value
+        ? [value]
+        : getDefaultCastleLayoutGoals();
+  const goals = rawGoals.slice(0, 5).map((goal) => {
+    const count = parseCastleLayoutGoalCount(goal?.countMode === "max" ? "max" : goal?.count);
+    return {
+      width: clampNumber(Math.trunc(Number(goal?.width) || 5), 1, Math.max(1, cols)),
+      height: clampNumber(Math.trunc(Number(goal?.height) || 5), 1, Math.max(1, rows)),
+      count: count === "max" ? "max" : count || 1,
+      countMode: count === "max" ? "max" : "number",
+      enabled: goal?.enabled !== false,
+    };
+  });
+  return goals.length > 0 ? goals : getDefaultCastleLayoutGoals();
+}
+
+function getCastleLayoutControlGoals(value, cols = 80, rows = 80) {
+  const defaultGoals = getDefaultCastleLayoutGoals();
+  const rawGoals = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.goals)
+      ? value.goals
+      : value
+        ? [value]
+        : [];
+  return normalizeCastleLayoutGoals(
+    defaultGoals.map((defaultGoal, index) => rawGoals[index] ? { ...defaultGoal, ...rawGoals[index] } : defaultGoal),
+    cols,
+    rows,
+  );
+}
+
+function getActiveCastleLayoutGoals(value, cols = 80, rows = 80) {
+  return normalizeCastleLayoutGoals(value, cols, rows).filter((goal) => goal.enabled !== false);
+}
+
+function formatCastleLayoutGoalCountValue(goal) {
+  return goal.countMode === "max" || goal.count === "max" ? "max" : String(goal.count || 1);
+}
+
+function getCastleLayoutPrimaryGoal(goals) {
+  return normalizeCastleLayoutGoals(goals)[0] || getDefaultCastleLayoutGoals()[0];
+}
+
+function normalizeCastleLayoutOptimizeMode(value) {
+  const normalized = String(value || "").toLowerCase();
+  return ["light", "deep", "extreme"].includes(normalized) ? normalized : "light";
+}
+
+function getCastleLayoutOptimizeConfig(mode) {
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(mode);
+  const configs = {
+    light: {
+      mode: "light",
+      actionLabel: "Light optimize",
+      progressLabel: "Light optimization",
+      baselineMode: null,
+      baselineStart: 0,
+      baselineEnd: 0,
+      searchStart: 8,
+      searchEnd: 56,
+      augmentStart: 58,
+      augmentEnd: 96,
+      reserveCountCap: 24,
+      multiReserveLimit: 96,
+      multiReservePerCountLarge: 8,
+      multiReservePerCountSmall: 6,
+      singleReserveLimitWithMulti: 40,
+      singleReserveLimitWithoutMulti: 130,
+      packProgressEvery: 6,
+      augmentMaxPasses: null,
+      augmentMaxPassesForMax: 8,
+      augmentCandidateLimit: 140,
+      augmentProgressEvery: 12,
+      augmentBeamWidth: 1,
+      packMode: "light",
+    },
+    deep: {
+      mode: "deep",
+      actionLabel: "Deep optimize",
+      progressLabel: "Deep optimization",
+      baselineMode: "light",
+      baselineStart: 5,
+      baselineEnd: 34,
+      searchStart: 36,
+      searchEnd: 61,
+      augmentStart: 63,
+      augmentEnd: 96,
+      reserveCountCap: 80,
+      multiReserveLimit: 360,
+      multiReservePerCountLarge: 22,
+      multiReservePerCountSmall: 14,
+      singleReserveLimitWithMulti: 90,
+      singleReserveLimitWithoutMulti: 150,
+      packProgressEvery: 3,
+      augmentMaxPasses: null,
+      augmentMaxPassesForMax: 24,
+      augmentCandidateLimit: 620,
+      augmentProgressEvery: 6,
+      augmentBeamWidth: 1,
+      packMode: "light",
+    },
+    extreme: {
+      mode: "extreme",
+      actionLabel: "Extreme optimize",
+      progressLabel: "Extreme optimization",
+      baselineMode: "deep",
+      baselineStart: 4,
+      baselineEnd: 46,
+      searchStart: 48,
+      searchEnd: 70,
+      augmentStart: 72,
+      augmentEnd: 96,
+      reserveCountCap: 140,
+      multiReserveLimit: 520,
+      multiReservePerCountLarge: 28,
+      multiReservePerCountSmall: 18,
+      singleReserveLimitWithMulti: 130,
+      singleReserveLimitWithoutMulti: 190,
+      packProgressEvery: 6,
+      augmentMaxPasses: null,
+      augmentMaxPassesForMax: 28,
+      augmentCandidateLimit: 180,
+      augmentProgressEvery: 12,
+      augmentBeamWidth: 3,
+      packMode: "light",
+    },
+  };
+  return configs[optimizeMode];
+}
+
+function scaleCastleLayoutProgress(percent, start, end) {
+  const normalized = clampNumber(Number(percent) || 0, 0, 100) / 100;
+  return start + normalized * (end - start);
+}
+
+function generateCastleLayoutPlan(items, goal, layoutBounds = null, pinnedItems = [], options = {}) {
+  const sourceBounds = layoutBounds || getCastleLayoutBounds(items);
+  const cols = Math.max(1, Math.trunc(sourceBounds.cols));
+  const rows = Math.max(1, Math.trunc(sourceBounds.rows));
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const normalizedGoals = normalizeCastleLayoutGoals(goal, cols, rows);
+  const primaryGoal = normalizedGoals[0];
+  const normalizedItems = items.map((item, index) => ({
+    ...item,
+    sourceIndex: index,
+  }));
+  const normalizedPinnedItems = normalizeCastleLayoutPinnedItems(pinnedItems, normalizedItems, cols, rows, blockedRects);
+  const multiReserveCandidates = getCastleLayoutMultiReserveCandidates(cols, rows, normalizedGoals, normalizedItems, normalizedPinnedItems, { blockedRects });
+  const singleReserveCandidates = getCastleLayoutReserveCandidates(cols, rows, normalizedGoals);
+  const candidates = [
+    ...multiReserveCandidates,
+    ...singleReserveCandidates.slice(0, multiReserveCandidates.length > 0 ? 40 : 130),
+  ];
+  if (!candidates.includes(null)) candidates.push(null);
+  let bestPlan = null;
+
+  candidates.forEach((reservedRect) => {
+    const packed = packCastleLayoutItems(normalizedItems, cols, rows, reservedRect, normalizedGoals, normalizedPinnedItems, { blockedRects });
+    if (!packed) return;
+    const plan = scoreCastleLayoutPlan(packed, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects);
+    if (isBetterCastleLayoutPlan(plan, bestPlan)) bestPlan = plan;
+  });
+
+  if (!bestPlan) {
+    const packed = packCastleLayoutItems(normalizedItems, cols, rows, null, normalizedGoals, normalizedPinnedItems, { blockedRects });
+    const repairedItems = repairCastleLayoutItemsAroundPins(normalizedItems, sourceBounds, cols, rows, normalizedGoals, normalizedPinnedItems, { blockedRects });
+    bestPlan = packed
+      ? scoreCastleLayoutPlan(packed, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects)
+      : scoreCastleLayoutPlan(repairedItems, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects);
+    bestPlan.placedCount = bestPlan.items.length;
+    bestPlan.totalCount = normalizedItems.length;
+  }
+
+  bestPlan = improveCastleLayoutPlanOpenSpaces(bestPlan, normalizedItems, cols, rows, normalizedGoals, normalizedPinnedItems, { blockedRects });
+
+  return {
+    ...bestPlan,
+    bounds: { minX: 0, minY: 0, cols, rows },
+    goals: normalizedGoals,
+    goal: primaryGoal,
+    blockedRects,
+  };
+}
+
+async function generateCastleLayoutPlanAsync(items, goal, layoutBounds = null, pinnedItems = [], options = {}) {
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(options.optimizeMode || (options.deepOptimize ? "deep" : "light"));
+  const config = getCastleLayoutOptimizeConfig(optimizeMode);
+  const report = async (percent, status, detail) => {
+    throwIfCastleLayoutCancelled(options);
+    if (typeof options.onProgress === "function") {
+      options.onProgress({ percent, status, detail, optimizeMode });
+    }
+    await waitForCastleLayoutFrame();
+    throwIfCastleLayoutCancelled(options);
+  };
+  throwIfCastleLayoutCancelled(options);
+
+  const sourceBounds = layoutBounds || getCastleLayoutBounds(items);
+  const cols = Math.max(1, Math.trunc(sourceBounds.cols));
+  const rows = Math.max(1, Math.trunc(sourceBounds.rows));
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const normalizedGoals = normalizeCastleLayoutGoals(goal, cols, rows);
+  const primaryGoal = normalizedGoals[0];
+  const normalizedItems = items.map((item, index) => ({
+    ...item,
+    sourceIndex: index,
+  }));
+  const normalizedPinnedItems = normalizeCastleLayoutPinnedItems(pinnedItems, normalizedItems, cols, rows, blockedRects);
+
+  let baselinePlan = null;
+  let bestPlan = null;
+  if (config.baselineMode) {
+    const baselineConfig = getCastleLayoutOptimizeConfig(config.baselineMode);
+    await report(
+      config.baselineStart,
+      `Building ${baselineConfig.actionLabel.toLowerCase()} baseline...`,
+      `${config.actionLabel} will only replace this if it improves the score`,
+    );
+    baselinePlan = await generateCastleLayoutPlanAsync(items, goal, layoutBounds, pinnedItems, {
+      optimizeMode: config.baselineMode,
+      blockedRects,
+      isCancelled: options.isCancelled,
+      onProgress: (progress) => {
+        if (typeof options.onProgress !== "function") return;
+        options.onProgress({
+          ...progress,
+          percent: scaleCastleLayoutProgress(progress.percent, config.baselineStart, config.baselineEnd),
+          optimizeMode,
+        });
+      },
+    });
+    bestPlan = baselinePlan;
+    const baselineFound = getCastleLayoutPrimaryGoalFound(baselinePlan);
+    await report(
+      config.baselineEnd,
+      `Baseline complete; checking ${config.actionLabel.toLowerCase()} candidates...`,
+      `Baseline has ${baselineFound} ${baselineFound === 1 ? "spot" : "spots"}`,
+    );
+  } else {
+    await report(6, "Building search space...", "Normalizing buildings, exclusions, and pinned targets");
+  }
+
+  const multiReserveCandidates = getCastleLayoutMultiReserveCandidates(cols, rows, normalizedGoals, normalizedItems, normalizedPinnedItems, { ...config, blockedRects });
+  const singleReserveCandidates = getCastleLayoutReserveCandidates(cols, rows, normalizedGoals);
+  const singleReserveLimit = multiReserveCandidates.length > 0
+    ? config.singleReserveLimitWithMulti
+    : config.singleReserveLimitWithoutMulti;
+  const candidates = [
+    ...multiReserveCandidates,
+    ...singleReserveCandidates.slice(0, singleReserveLimit),
+  ];
+  if (!candidates.includes(null)) candidates.push(null);
+
+  const candidateCount = Math.max(1, candidates.length);
+  for (let index = 0; index < candidates.length; index += 1) {
+    throwIfCastleLayoutCancelled(options);
+    const reservedRect = candidates[index];
+    const packed = packCastleLayoutItems(normalizedItems, cols, rows, reservedRect, normalizedGoals, normalizedPinnedItems, { optimizeMode: config.packMode, blockedRects });
+    if (packed) {
+      const plan = scoreCastleLayoutPlan(packed, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects);
+      if (isBetterCastleLayoutPlan(plan, bestPlan)) bestPlan = plan;
+    }
+    if (index % config.packProgressEvery === 0 || index === candidates.length - 1) {
+      const percent = config.searchStart + ((index + 1) / candidateCount) * (config.searchEnd - config.searchStart);
+      const found = getCastleLayoutPrimaryGoalFound(bestPlan);
+      await report(
+        percent,
+        `Packing ${config.actionLabel.toLowerCase()} candidate layouts...`,
+        `${index + 1}/${candidateCount} candidates checked${found ? `; best has ${found} spots` : ""}`,
+      );
+    }
+  }
+
+  if (!bestPlan) {
+    await report(config.augmentStart, "Repairing around pinned buildings...", "Trying a fallback layout without overlaps");
+    const packed = packCastleLayoutItems(normalizedItems, cols, rows, null, normalizedGoals, normalizedPinnedItems, { optimizeMode: config.packMode, blockedRects });
+    const repairedItems = repairCastleLayoutItemsAroundPins(normalizedItems, sourceBounds, cols, rows, normalizedGoals, normalizedPinnedItems, { optimizeMode: config.packMode, blockedRects });
+    bestPlan = packed
+      ? scoreCastleLayoutPlan(packed, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects)
+      : scoreCastleLayoutPlan(repairedItems, cols, rows, normalizedGoals, normalizedPinnedItems, blockedRects);
+    bestPlan.placedCount = bestPlan.items.length;
+    bestPlan.totalCount = normalizedItems.length;
+  }
+
+  bestPlan = await improveCastleLayoutPlanOpenSpacesAsync(bestPlan, normalizedItems, cols, rows, normalizedGoals, normalizedPinnedItems, {
+    ...config,
+    blockedRects,
+    isCancelled: options.isCancelled,
+    onProgress: report,
+  });
+
+  throwIfCastleLayoutCancelled(options);
+  if (baselinePlan && !isBetterCastleLayoutPlan(bestPlan, baselinePlan)) {
+    bestPlan = baselinePlan;
+  }
+
+  await report(98, "Finalizing suggested layout...", "Scoring open spaces and checking overlaps");
+
+  return {
+    ...bestPlan,
+    bounds: { minX: 0, minY: 0, cols, rows },
+    goals: normalizedGoals,
+    goal: primaryGoal,
+    blockedRects,
+  };
+}
+
+function normalizeCastleLayoutPinnedItems(pinnedItems, items, cols, rows, blockedRects = []) {
+  if (!Array.isArray(pinnedItems) || pinnedItems.length === 0) return [];
+  const itemByKey = new Map(items.map((item) => [item.layoutKey, item]));
+  const grid = createCastleLayoutGrid(cols, rows);
+  const normalized = [];
+
+  normalizeCastleLayoutBlockedRects(blockedRects, cols, rows).forEach((rect) => {
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+
+  pinnedItems.forEach((pin, index) => {
+    const item = itemByKey.get(pin.layoutKey);
+    if (!item) return;
+    const x = clampNumber(Math.trunc(Number(pin.x) || 0), 0, Math.max(0, cols - item.width));
+    const y = clampNumber(Math.trunc(Number(pin.y) || 0), 0, Math.max(0, rows - item.height));
+    if (!canPlaceCastleLayoutRect(grid, x, y, item.width, item.height)) return;
+    markCastleLayoutRect(grid, x, y, item.width, item.height, true);
+    normalized.push({
+      ...item,
+      x,
+      y,
+      pinnedIndex: pin.pinnedIndex || index + 1,
+      isPinned: true,
+    });
+  });
+
+  return normalized;
+}
+
+function normalizeCastleLayoutItemsToBounds(items, bounds) {
+  return items.map((item) => ({
+    ...item,
+    x: Math.max(0, Math.trunc(item.x - bounds.minX)),
+    y: Math.max(0, Math.trunc(item.y - bounds.minY)),
+  }));
+}
+
+function repairCastleLayoutItemsAroundPins(items, sourceBounds, cols, rows, goals, pinnedItems = [], options = {}) {
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(options.optimizeMode);
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const normalizedItems = normalizeCastleLayoutItemsToBounds(items, sourceBounds);
+  const pinnedByKey = new Map(pinnedItems.map((item) => [item.layoutKey, item]));
+  const pinnedKeys = new Set(pinnedByKey.keys());
+  const seededItems = normalizedItems.map((item) => (
+    pinnedByKey.has(item.layoutKey) ? { ...item, ...pinnedByKey.get(item.layoutKey) } : item
+  ));
+  const orders = getCastleLayoutItemOrders(seededItems.filter((item) => !pinnedKeys.has(item.layoutKey)), optimizeMode);
+  const strategies = getCastleLayoutPlacementStrategies(pinnedItems, optimizeMode);
+  let best = null;
+
+  orders.forEach((orderedMovableItems) => {
+    strategies.forEach((strategy) => {
+      const repaired = tryRepairCastleLayoutItemsAroundPins(seededItems, orderedMovableItems, cols, rows, strategy, pinnedItems, { blockedRects });
+      if (repaired.length === 0 || hasCastleLayoutOverlaps(repaired)) return;
+      const plan = scoreCastleLayoutPlan(repaired, cols, rows, goals, pinnedItems, blockedRects);
+      plan.placedCount = repaired.length;
+      plan.totalCount = items.length;
+      plan.scoreVector = [repaired.length, ...plan.scoreVector];
+      if (isBetterCastleLayoutPlan(plan, best)) best = plan;
+    });
+  });
+
+  return best ? best.items.sort((a, b) => a.sourceIndex - b.sourceIndex) : pinnedItems.map((item) => ({ ...item }));
+}
+
+function tryRepairCastleLayoutItemsAroundPins(allItems, orderedMovableItems, cols, rows, strategy, pinnedItems = [], options = {}) {
+  const grid = createCastleLayoutGrid(cols, rows);
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const packed = [];
+  const pinnedKeys = new Set();
+  const remainingByKey = new Map(orderedMovableItems.map((item) => [item.layoutKey, item]));
+  const displaced = [];
+
+  blockedRects.forEach((rect) => {
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+
+  pinnedItems.forEach((item) => {
+    if (pinnedKeys.has(item.layoutKey)) return;
+    if (!canPlaceCastleLayoutRect(grid, item.x, item.y, item.width, item.height)) return;
+    markCastleLayoutRect(grid, item.x, item.y, item.width, item.height, true);
+    packed.push({ ...item });
+    pinnedKeys.add(item.layoutKey);
+    remainingByKey.delete(item.layoutKey);
+  });
+
+  allItems.forEach((item) => {
+    if (pinnedKeys.has(item.layoutKey) || !remainingByKey.has(item.layoutKey)) return;
+    if (canPlaceCastleLayoutRect(grid, item.x, item.y, item.width, item.height)) {
+      markCastleLayoutRect(grid, item.x, item.y, item.width, item.height, true);
+      packed.push({ ...item });
+      remainingByKey.delete(item.layoutKey);
+    }
+  });
+
+  orderedMovableItems.forEach((item) => {
+    if (remainingByKey.has(item.layoutKey)) displaced.push(item);
+  });
+
+  displaced.forEach((item) => {
+    const position = findCastleLayoutPlacement(grid, cols, rows, item.width, item.height, strategy);
+    if (!position) return;
+    markCastleLayoutRect(grid, position.x, position.y, item.width, item.height, true);
+    packed.push({ ...item, x: position.x, y: position.y });
+  });
+
+  return packed.sort((a, b) => a.sourceIndex - b.sourceIndex);
+}
+
+function improveCastleLayoutPlanOpenSpaces(plan, items, cols, rows, goals, pinnedItems = [], options = {}) {
+  const primaryGoal = normalizeCastleLayoutGoals(goals, cols, rows)[0];
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  if (!plan || !primaryGoal) return plan;
+  const goalWidth = Math.max(1, Math.trunc(Number(primaryGoal.width) || 1));
+  const goalHeight = Math.max(1, Math.trunc(Number(primaryGoal.height) || 1));
+  if (goalWidth > cols || goalHeight > rows) return plan;
+
+  const maxPasses = primaryGoal.countMode === "max" ? 8 : Math.max(1, Math.trunc(Number(primaryGoal.count) || 1));
+  let bestPlan = plan;
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    const foundBefore = getCastleLayoutPrimaryGoalFound(bestPlan);
+    const candidates = getCastleLayoutOpenSpaceAugmentCandidates(bestPlan, cols, rows, primaryGoal, 140, blockedRects);
+    let improvedPlan = null;
+
+    for (const candidate of candidates) {
+      const reservedRects = [
+        ...getCastleLayoutPrimaryGoalRects(bestPlan),
+        candidate,
+      ];
+      const packed = packCastleLayoutItems(items, cols, rows, reservedRects, goals, pinnedItems, { blockedRects });
+      if (!packed) continue;
+      const candidatePlan = scoreCastleLayoutPlan(packed, cols, rows, goals, pinnedItems, blockedRects);
+      if (getCastleLayoutPrimaryGoalFound(candidatePlan) <= foundBefore) continue;
+      if (isBetterCastleLayoutPlan(candidatePlan, improvedPlan)) improvedPlan = candidatePlan;
+    }
+
+    if (!improvedPlan || !isBetterCastleLayoutPlan(improvedPlan, bestPlan)) break;
+    bestPlan = improvedPlan;
+  }
+
+  return bestPlan;
+}
+
+async function improveCastleLayoutPlanOpenSpacesAsync(plan, items, cols, rows, goals, pinnedItems = [], options = {}) {
+  const primaryGoal = normalizeCastleLayoutGoals(goals, cols, rows)[0];
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  if (!plan || !primaryGoal) return plan;
+  const goalWidth = Math.max(1, Math.trunc(Number(primaryGoal.width) || 1));
+  const goalHeight = Math.max(1, Math.trunc(Number(primaryGoal.height) || 1));
+  if (goalWidth > cols || goalHeight > rows) return plan;
+
+  const config = getCastleLayoutOptimizeConfig(options.mode || options.optimizeMode || "light");
+  const maxPasses = config.augmentMaxPasses
+    || (primaryGoal.countMode === "max" ? config.augmentMaxPassesForMax : Math.max(1, Math.trunc(Number(primaryGoal.count) || 1)));
+  const candidateLimit = config.augmentCandidateLimit;
+  const beamWidth = Math.max(1, Math.trunc(Number(config.augmentBeamWidth) || 1));
+  let bestPlan = plan;
+  let beam = [plan];
+
+  for (let pass = 0; pass < maxPasses; pass += 1) {
+    throwIfCastleLayoutCancelled(options);
+    const foundBefore = getCastleLayoutPrimaryGoalFound(bestPlan);
+    const passPlans = [];
+    let checkedCount = 0;
+    const candidateSets = beam.map((basePlan) => ({
+      basePlan,
+      candidates: getCastleLayoutOpenSpaceAugmentCandidates(basePlan, cols, rows, primaryGoal, candidateLimit, blockedRects),
+    }));
+    const totalCandidates = Math.max(1, candidateSets.reduce((sum, entry) => sum + entry.candidates.length, 0));
+
+    for (const entry of candidateSets) {
+      throwIfCastleLayoutCancelled(options);
+      const baseFound = getCastleLayoutPrimaryGoalFound(entry.basePlan);
+      for (let index = 0; index < entry.candidates.length; index += 1) {
+        throwIfCastleLayoutCancelled(options);
+        const candidate = entry.candidates[index];
+        const reservedRects = [
+          ...getCastleLayoutPrimaryGoalRects(entry.basePlan),
+          candidate,
+        ];
+        const packed = packCastleLayoutItems(items, cols, rows, reservedRects, goals, pinnedItems, { optimizeMode: config.packMode, blockedRects });
+        if (packed) {
+          const candidatePlan = scoreCastleLayoutPlan(packed, cols, rows, goals, pinnedItems, blockedRects);
+          if (beamWidth > 1 || getCastleLayoutPrimaryGoalFound(candidatePlan) > baseFound) {
+            passPlans.push(candidatePlan);
+          }
+          if (isBetterCastleLayoutPlan(candidatePlan, bestPlan)) bestPlan = candidatePlan;
+        }
+
+        checkedCount += 1;
+        if (checkedCount % config.augmentProgressEvery === 0 || checkedCount === totalCandidates) {
+          const passProgress = (pass + (checkedCount / totalCandidates)) / maxPasses;
+          const percent = config.augmentStart + passProgress * (config.augmentEnd - config.augmentStart);
+          const bestFound = Math.max(foundBefore, getCastleLayoutPrimaryGoalFound(bestPlan));
+          if (typeof options.onProgress === "function") {
+            await options.onProgress(
+              percent,
+              `${config.actionLabel} open spaces...`,
+              `${beamWidth > 1 ? "Search round" : "Pass"} ${pass + 1}/${maxPasses}; checked ${checkedCount}/${totalCandidates} shifts; best has ${bestFound} spots`,
+            );
+          } else {
+            await waitForCastleLayoutFrame();
+          }
+        }
+      }
+    }
+
+    if (beamWidth <= 1) {
+      if (getCastleLayoutPrimaryGoalFound(bestPlan) <= foundBefore) break;
+      beam = [bestPlan];
+      continue;
+    }
+
+    const nextBeam = getCastleLayoutExplorationBeam([bestPlan, ...passPlans, ...beam], beamWidth);
+    const previousSignatures = new Set(beam.map(getCastleLayoutPlanSignature));
+    const hasNewLayout = nextBeam.some((candidate) => !previousSignatures.has(getCastleLayoutPlanSignature(candidate)));
+    beam = nextBeam;
+    if (!hasNewLayout && getCastleLayoutPrimaryGoalFound(bestPlan) <= foundBefore) break;
+  }
+
+  return bestPlan;
+}
+
+function getCastleLayoutExplorationBeam(plans, limit) {
+  const unique = new Map();
+  plans.forEach((plan) => {
+    if (!plan) return;
+    const signature = getCastleLayoutPlanSignature(plan);
+    const current = unique.get(signature);
+    if (!current || isBetterCastleLayoutExplorationPlan(plan, current)) unique.set(signature, plan);
+  });
+  return [...unique.values()]
+    .sort((a, b) => (isBetterCastleLayoutExplorationPlan(a, b) ? -1 : isBetterCastleLayoutExplorationPlan(b, a) ? 1 : 0))
+    .slice(0, Math.max(1, Math.trunc(Number(limit) || 1)));
+}
+
+function isBetterCastleLayoutExplorationPlan(plan, currentBest) {
+  if (!currentBest) return true;
+  if (isBetterCastleLayoutPlan(plan, currentBest)) return true;
+  if (isBetterCastleLayoutPlan(currentBest, plan)) return false;
+  const next = getCastleLayoutExplorationScoreVector(plan);
+  const best = getCastleLayoutExplorationScoreVector(currentBest);
+  const length = Math.max(next.length, best.length);
+  for (let index = 0; index < length; index += 1) {
+    const diff = (next[index] || 0) - (best[index] || 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return false;
+}
+
+function getCastleLayoutExplorationScoreVector(plan) {
+  const primary = Array.isArray(plan?.goalResults) ? plan.goalResults[0] : null;
+  const closest = primary?.closest || plan?.largestEmpty || {};
+  return [
+    getCastleLayoutPrimaryGoalFound(plan),
+    Math.max(0, Math.trunc(Number(primary?.possibleCount) || 0)),
+    Math.max(0, Math.trunc(Number(closest.goalFit) || 0)),
+    Math.round((Number(closest.dimensionFit) || 0) * 1000),
+    -Math.max(0, Math.trunc(Number(closest.shortfall) || 0)),
+    Math.max(0, Math.trunc(Number(closest.area) || 0)),
+  ];
+}
+
+function getCastleLayoutPlanSignature(plan) {
+  return (Array.isArray(plan?.items) ? plan.items : [])
+    .map((item) => `${item.layoutKey || item.sourceIndex}:${Math.trunc(Number(item.x) || 0)},${Math.trunc(Number(item.y) || 0)}`)
+    .sort()
+    .join("|");
+}
+
+function getCastleLayoutPrimaryGoalFound(plan) {
+  const result = Array.isArray(plan?.goalResults) ? plan.goalResults[0] : null;
+  return Math.max(0, Math.trunc(Number(result?.found ?? plan?.goalSpaces) || 0));
+}
+
+function getCastleLayoutPrimaryGoalRects(plan) {
+  return (Array.isArray(plan?.goalRects) ? plan.goalRects : [])
+    .filter((rect) => !rect.priority || rect.priority === 1)
+    .map((rect) => ({
+      x: Math.max(0, Math.trunc(Number(rect.x) || 0)),
+      y: Math.max(0, Math.trunc(Number(rect.y) || 0)),
+      width: Math.max(1, Math.trunc(Number(rect.width) || 1)),
+      height: Math.max(1, Math.trunc(Number(rect.height) || 1)),
+    }));
+}
+
+function getCastleLayoutOpenSpaceAugmentCandidates(plan, cols, rows, goal, limit = 120, blockedRects = []) {
+  const width = Math.max(1, Math.trunc(Number(goal.width) || 1));
+  const height = Math.max(1, Math.trunc(Number(goal.height) || 1));
+  const reservedGrid = createCastleLayoutGrid(cols, rows);
+  normalizeCastleLayoutBlockedRects(blockedRects, cols, rows).forEach((rect) => {
+    markCastleLayoutRect(reservedGrid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+  getCastleLayoutPrimaryGoalRects(plan).forEach((rect) => {
+    markCastleLayoutRect(reservedGrid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+
+  const items = Array.isArray(plan?.items) ? plan.items : [];
+  const candidates = [];
+  for (let y = 0; y <= rows - height; y += 1) {
+    for (let x = 0; x <= cols - width; x += 1) {
+      if (!canPlaceCastleLayoutRect(reservedGrid, x, y, width, height)) continue;
+      const rect = { x, y, width, height };
+      const blocking = getCastleLayoutRectBlockingStats(rect, items);
+      candidates.push({
+        ...rect,
+        blockerCount: blocking.count,
+        blockerArea: blocking.area,
+        edgeDistance: Math.min(x, y, cols - (x + width), rows - (y + height)),
+      });
+    }
+  }
+
+  return candidates
+    .sort((a, b) => {
+      if (a.blockerCount !== b.blockerCount) return a.blockerCount - b.blockerCount;
+      if (a.blockerArea !== b.blockerArea) return a.blockerArea - b.blockerArea;
+      if (a.edgeDistance !== b.edgeDistance) return a.edgeDistance - b.edgeDistance;
+      if (a.y !== b.y) return a.y - b.y;
+      return a.x - b.x;
+    })
+    .slice(0, limit)
+    .map(({ x, y, width: rectWidth, height: rectHeight }) => ({
+      x,
+      y,
+      width: rectWidth,
+      height: rectHeight,
+    }));
+}
+
+function getCastleLayoutRectBlockingStats(rect, items) {
+  return items.reduce((stats, item) => {
+    if (!doCastleLayoutRectsOverlap(rect, item)) return stats;
+    const left = Math.max(rect.x, item.x);
+    const top = Math.max(rect.y, item.y);
+    const right = Math.min(rect.x + rect.width, item.x + item.width);
+    const bottom = Math.min(rect.y + rect.height, item.y + item.height);
+    return {
+      count: stats.count + 1,
+      area: stats.area + Math.max(0, right - left) * Math.max(0, bottom - top),
+    };
+  }, { count: 0, area: 0 });
+}
+
+function getCastleLayoutMultiReserveCandidates(cols, rows, goals, items = [], pinnedItems = [], options = {}) {
+  const primaryGoal = normalizeCastleLayoutGoals(goals, cols, rows)[0];
+  if (!primaryGoal) return [];
+  const config = getCastleLayoutOptimizeConfig(options.mode || options.optimizeMode || "light");
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const width = Math.max(1, Math.trunc(Number(primaryGoal.width) || 1));
+  const height = Math.max(1, Math.trunc(Number(primaryGoal.height) || 1));
+  if (width > cols || height > rows) return [];
+
+  const reserveCounts = getCastleLayoutReserveCountTargets(cols, rows, primaryGoal, items, { ...config, blockedRects });
+  if (reserveCounts.length === 0) return [];
+
+  const pinnedGrid = createCastleLayoutGrid(cols, rows);
+  blockedRects.forEach((rect) => {
+    markCastleLayoutRect(pinnedGrid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+  pinnedItems.forEach((item) => {
+    if (canPlaceCastleLayoutRect(pinnedGrid, item.x, item.y, item.width, item.height)) {
+      markCastleLayoutRect(pinnedGrid, item.x, item.y, item.width, item.height, true);
+    }
+  });
+
+  const candidatesByCount = new Map();
+  const addCandidateSet = (rects) => {
+    const validRects = [];
+    const grid = cloneCastleLayoutGrid(pinnedGrid);
+    for (const rect of rects) {
+      if (!canPlaceCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height)) continue;
+      markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+      validRects.push(rect);
+    }
+    if (validRects.length === 0) return;
+    const key = validRects.map((rect) => `${rect.x},${rect.y},${rect.width},${rect.height}`).join("|");
+    const count = validRects.length;
+    if (!candidatesByCount.has(count)) candidatesByCount.set(count, new Map());
+    candidatesByCount.get(count).set(key, validRects);
+  };
+
+  const xOffsets = getCastleLayoutReservePhaseOffsets(width);
+  const yOffsets = getCastleLayoutReservePhaseOffsets(height);
+  const orderers = getCastleLayoutReserveSlotOrderers(cols, rows, config.mode);
+
+  yOffsets.forEach((offsetY) => {
+    xOffsets.forEach((offsetX) => {
+      const slots = [];
+      for (let y = offsetY; y <= rows - height; y += height) {
+        for (let x = offsetX; x <= cols - width; x += width) {
+          slots.push({ x, y, width, height });
+        }
+      }
+      if (slots.length === 0) return;
+
+      orderers.forEach((orderer) => {
+        const orderedSlots = [...slots].sort(orderer);
+        reserveCounts.forEach((count) => {
+          addCandidateSet(orderedSlots.slice(0, count));
+        });
+      });
+    });
+  });
+
+  return reserveCounts.flatMap((count) => (
+    [...(candidatesByCount.get(count)?.values() || [])].slice(0, count >= 10 ? config.multiReservePerCountLarge : config.multiReservePerCountSmall)
+  )).slice(0, config.multiReserveLimit);
+}
+
+function getCastleLayoutReserveCountTargets(cols, rows, goal, items = [], options = {}) {
+  const goalArea = Math.max(1, goal.width * goal.height);
+  const itemArea = items.reduce((sum, item) => sum + Math.max(1, item.width * item.height), 0);
+  const blockedArea = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows)
+    .reduce((sum, rect) => sum + rect.width * rect.height, 0);
+  const freeArea = Math.max(0, cols * rows - itemArea - blockedArea);
+  const maxByArea = Math.floor(freeArea / goalArea);
+  const requested = goal.countMode === "max"
+    ? maxByArea
+    : Math.min(maxByArea, Math.max(1, Math.trunc(Number(goal.count) || 1)));
+  const capped = clampNumber(requested, 0, options.reserveCountCap || 24);
+  if (capped < 1) return [];
+
+  if (options.mode === "extreme") {
+    return Array.from({ length: capped }, (_, index) => capped - index);
+  }
+
+  const nearCountWindow = options.mode === "deep" ? 12 : 4;
+  const counts = new Set([
+    capped,
+    12,
+    10,
+    9,
+    16,
+    14,
+    8,
+    6,
+    4,
+    2,
+    1,
+  ]);
+  for (let offset = 1; offset <= nearCountWindow; offset += 1) {
+    counts.add(capped - offset);
+  }
+  if (capped > 24) {
+    counts.add(capped - 6);
+    counts.add(capped - 8);
+    counts.add(capped - 10);
+    counts.add(24);
+    counts.add(22);
+    counts.add(20);
+    counts.add(18);
+  }
+
+  return [...counts]
+    .filter((count) => Number.isFinite(count) && count > 0 && count <= capped)
+    .sort((a, b) => b - a);
+}
+
+function getCastleLayoutReservePhaseOffsets(size) {
+  const normalized = Math.max(1, Math.trunc(Number(size) || 1));
+  if (normalized <= 8) return Array.from({ length: normalized }, (_, index) => index);
+  return [...new Set([
+    0,
+    Math.floor(normalized / 4),
+    Math.floor(normalized / 2),
+    Math.floor((normalized * 3) / 4),
+    normalized - 1,
+  ])];
+}
+
+function getCastleLayoutReserveSlotOrderers(cols, rows, optimizeMode = "light") {
+  const centerX = cols / 2;
+  const centerY = rows / 2;
+  const orderers = [
+    (a, b) => a.y - b.y || a.x - b.x,
+    (a, b) => b.y - a.y || b.x - a.x,
+    (a, b) => a.x - b.x || a.y - b.y,
+    (a, b) => b.x - a.x || b.y - a.y,
+    (a, b) => (Math.abs(a.x - centerX) + Math.abs(a.y - centerY)) - (Math.abs(b.x - centerX) + Math.abs(b.y - centerY)),
+    (a, b) => (Math.abs(b.x - centerX) + Math.abs(b.y - centerY)) - (Math.abs(a.x - centerX) + Math.abs(a.y - centerY)),
+  ];
+  if (normalizeCastleLayoutOptimizeMode(optimizeMode) === "extreme") {
+    orderers.push(
+      (a, b) => (a.x + a.y) - (b.x + b.y) || a.y - b.y,
+      (a, b) => (b.x + b.y) - (a.x + a.y) || b.y - a.y,
+      (a, b) => (a.x - a.y) - (b.x - b.y) || a.x - b.x,
+      (a, b) => (b.x - b.y) - (a.x - a.y) || b.x - a.x,
+      (a, b) => Math.min(a.x, cols - (a.x + a.width)) - Math.min(b.x, cols - (b.x + b.width)) || a.y - b.y,
+      (a, b) => Math.min(a.y, rows - (a.y + a.height)) - Math.min(b.y, rows - (b.y + b.height)) || a.x - b.x,
+    );
+  }
+  return orderers;
+}
+
+function getCastleLayoutReserveCandidates(cols, rows, goals) {
+  const normalizedGoals = normalizeCastleLayoutGoals(goals, cols, rows);
+  const sizeMap = new Map();
+  normalizedGoals.forEach((goal, priority) => {
+    getCastleLayoutReserveSizes(cols, rows, goal).forEach((size) => {
+      const key = `${size.width}x${size.height}`;
+      if (!sizeMap.has(key)) sizeMap.set(key, { ...size, priority });
+    });
+  });
+  const sizes = [...sizeMap.values()]
+    .sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      if (b.fit !== a.fit) return b.fit - a.fit;
+      if (a.shortfall !== b.shortfall) return a.shortfall - b.shortfall;
+      return b.area - a.area;
+    })
+    .slice(0, 18);
+  const points = new Map();
+  const add = (x, y, width, height) => {
+    const maxX = Math.max(0, cols - width);
+    const maxY = Math.max(0, rows - height);
+    const nextX = clampNumber(Math.round(x), 0, maxX);
+    const nextY = clampNumber(Math.round(y), 0, maxY);
+    points.set(`${width}x${height}|${nextX}|${nextY}`, { x: nextX, y: nextY, width, height });
+  };
+
+  sizes.forEach(({ width, height }, sizeIndex) => {
+    const maxX = Math.max(0, cols - width);
+    const maxY = Math.max(0, rows - height);
+    const xAnchors = [0, maxX, maxX / 2, maxX / 3, maxX * 2 / 3];
+    const yAnchors = [0, maxY, maxY / 2, maxY / 3, maxY * 2 / 3];
+    xAnchors.forEach((x) => yAnchors.forEach((y) => add(x, y, width, height)));
+
+    if (sizeIndex > 2) return;
+    const stepX = Math.max(1, Math.floor(Math.max(width, cols / 10)));
+    const stepY = Math.max(1, Math.floor(Math.max(height, rows / 10)));
+    for (let x = 0; x <= maxX; x += stepX) {
+      add(x, 0, width, height);
+      add(x, maxY, width, height);
+      add(x, maxY / 2, width, height);
+    }
+    for (let y = 0; y <= maxY; y += stepY) {
+      add(0, y, width, height);
+      add(maxX, y, width, height);
+      add(maxX / 2, y, width, height);
+    }
+  });
+
+  const candidatesBySize = new Map();
+  [...points.values()].forEach((rect) => {
+    const key = `${rect.width}x${rect.height}`;
+    if (!candidatesBySize.has(key)) candidatesBySize.set(key, []);
+    candidatesBySize.get(key).push(rect);
+  });
+
+  const balancedCandidates = sizes.flatMap((size, index) => {
+    const candidates = candidatesBySize.get(`${size.width}x${size.height}`) || [];
+    const limit = index === 0 ? 52 : index <= 2 ? 20 : 8;
+    return candidates.slice(0, limit);
+  });
+
+  return balancedCandidates.slice(0, 130).concat(null);
+}
+
+function getCastleLayoutReserveSizes(cols, rows, goal) {
+  const goalWidth = Math.min(goal.width, cols);
+  const goalHeight = Math.min(goal.height, rows);
+  const sizes = new Map();
+  const add = (width, height) => {
+    const nextWidth = clampNumber(Math.trunc(width), 1, cols);
+    const nextHeight = clampNumber(Math.trunc(height), 1, rows);
+    sizes.set(`${nextWidth}x${nextHeight}`, {
+      width: nextWidth,
+      height: nextHeight,
+      fit: Math.min(nextWidth, goalWidth) * Math.min(nextHeight, goalHeight),
+      area: nextWidth * nextHeight,
+      shortfall: Math.max(0, goalWidth - nextWidth) + Math.max(0, goalHeight - nextHeight),
+    });
+  };
+
+  add(goalWidth, goalHeight);
+  const largestGoalSide = Math.max(goalWidth, goalHeight);
+  const maxRelaxSteps = Math.min(largestGoalSide - 1, 8);
+  for (let step = 1; step <= maxRelaxSteps; step += 1) {
+    add(goalWidth - step, goalHeight);
+    add(goalWidth, goalHeight - step);
+    add(goalWidth - step, goalHeight - step);
+    add(goalWidth + step, goalHeight - step);
+    add(goalWidth - step, goalHeight + step);
+  }
+  add(Math.ceil(goalWidth * 0.75), Math.ceil(goalHeight * 0.75));
+  add(Math.ceil(goalWidth * 0.5), Math.ceil(goalHeight * 0.5));
+
+  return [...sizes.values()]
+    .sort((a, b) => {
+      if (b.fit !== a.fit) return b.fit - a.fit;
+      if (a.shortfall !== b.shortfall) return a.shortfall - b.shortfall;
+      return b.area - a.area;
+    })
+    .slice(0, 12);
+}
+
+function packCastleLayoutItems(items, cols, rows, reservedRect = null, goals = getDefaultCastleLayoutGoals(), pinnedItems = [], options = {}) {
+  const optimizeMode = normalizeCastleLayoutOptimizeMode(options.optimizeMode);
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const orders = getCastleLayoutItemOrders(items, optimizeMode);
+  const strategies = getCastleLayoutPlacementStrategies(pinnedItems, optimizeMode);
+  let best = null;
+
+  orders.forEach((orderedItems) => {
+    strategies.forEach((strategy) => {
+      const packed = tryPackCastleLayoutItems(orderedItems, cols, rows, reservedRect, strategy, pinnedItems, { blockedRects });
+      if (!packed) return;
+      const plan = scoreCastleLayoutPlan(packed, cols, rows, goals, pinnedItems, blockedRects);
+      if (isBetterCastleLayoutPlan(plan, best)) best = plan;
+    });
+  });
+
+  return best ? best.items.sort((a, b) => a.sourceIndex - b.sourceIndex) : null;
+}
+
+function getCastleLayoutItemOrders(items, optimizeMode = "light") {
+  const sourceSort = (a, b) => a.sourceIndex - b.sourceIndex;
+  const comparators = [
+    (a, b) => b.width * b.height - a.width * a.height || Math.max(b.width, b.height) - Math.max(a.width, a.height) || sourceSort(a, b),
+    (a, b) => Math.max(b.width, b.height) - Math.max(a.width, a.height) || b.width * b.height - a.width * a.height || sourceSort(a, b),
+    (a, b) => b.width - a.width || b.height - a.height || sourceSort(a, b),
+    (a, b) => b.height - a.height || b.width - a.width || sourceSort(a, b),
+    sourceSort,
+  ];
+  if (["deep", "extreme"].includes(normalizeCastleLayoutOptimizeMode(optimizeMode))) {
+    comparators.push(
+      (a, b) => (a.y - b.y) || (a.x - b.x) || sourceSort(a, b),
+      (a, b) => (b.y - a.y) || (b.x - a.x) || sourceSort(a, b),
+      (a, b) => (a.x - b.x) || (a.y - b.y) || sourceSort(a, b),
+      (a, b) => (b.x - a.x) || (b.y - a.y) || sourceSort(a, b),
+    );
+  }
+  if (normalizeCastleLayoutOptimizeMode(optimizeMode) === "extreme") {
+    comparators.push(
+      (a, b) => a.width * a.height - b.width * b.height || Math.max(a.width, a.height) - Math.max(b.width, b.height) || sourceSort(a, b),
+      (a, b) => Math.abs(b.width - b.height) - Math.abs(a.width - a.height) || b.width * b.height - a.width * a.height || sourceSort(a, b),
+      (a, b) => Math.abs(a.width - a.height) - Math.abs(b.width - b.height) || b.width * b.height - a.width * a.height || sourceSort(a, b),
+    );
+  }
+  const seen = new Set();
+  return comparators.flatMap((compare) => {
+    const ordered = [...items].sort(compare);
+    const key = ordered.map((item) => item.sourceIndex).join("|");
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [ordered];
+  });
+}
+
+function getCastleLayoutPlacementStrategies(pinnedItems = [], optimizeMode = "light") {
+  const baseStrategies = [
+    { primary: "row", xDirection: "asc", yDirection: "asc" },
+    { primary: "row", xDirection: "desc", yDirection: "asc" },
+    { primary: "row", xDirection: "asc", yDirection: "desc" },
+    { primary: "row", xDirection: "desc", yDirection: "desc" },
+    { primary: "column", xDirection: "asc", yDirection: "asc" },
+    { primary: "column", xDirection: "desc", yDirection: "desc" },
+  ];
+  if (["deep", "extreme"].includes(normalizeCastleLayoutOptimizeMode(optimizeMode))) {
+    baseStrategies.push(
+      { primary: "column", xDirection: "asc", yDirection: "desc" },
+      { primary: "column", xDirection: "desc", yDirection: "asc" },
+    );
+  }
+  if (normalizeCastleLayoutOptimizeMode(optimizeMode) === "extreme") {
+    baseStrategies.push(
+      { primary: "score", scoreMode: "center" },
+      { primary: "score", scoreMode: "edge" },
+      { primary: "score", scoreMode: "top-edge" },
+      { primary: "score", scoreMode: "left-edge" },
+    );
+  }
+  if (!Array.isArray(pinnedItems) || pinnedItems.length === 0) return baseStrategies;
+  const anchorRect = getCastleLayoutAnchorRect(pinnedItems);
+  return [
+    { primary: "anchor", anchorRect, xDirection: "asc", yDirection: "asc" },
+    { primary: "anchor", anchorRect, xDirection: "desc", yDirection: "asc" },
+    { primary: "anchor", anchorRect, xDirection: "asc", yDirection: "desc" },
+    { primary: "anchor", anchorRect, xDirection: "desc", yDirection: "desc" },
+    ...baseStrategies,
+  ];
+}
+
+function tryPackCastleLayoutItems(items, cols, rows, reservedRect, strategy, pinnedItems = [], options = {}) {
+  const grid = createCastleLayoutGrid(cols, rows);
+  const blockedRects = normalizeCastleLayoutBlockedRects(options.blockedRects, cols, rows);
+  const packed = [];
+  const pinnedKeys = new Set();
+  let invalidPinnedPlacement = false;
+
+  blockedRects.forEach((rect) => {
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+
+  pinnedItems.forEach((item) => {
+    if (pinnedKeys.has(item.layoutKey)) return;
+    if (!canPlaceCastleLayoutRect(grid, item.x, item.y, item.width, item.height)) {
+      invalidPinnedPlacement = true;
+      return;
+    }
+    markCastleLayoutRect(grid, item.x, item.y, item.width, item.height, true);
+    packed.push({ ...item });
+    pinnedKeys.add(item.layoutKey);
+  });
+
+  if (invalidPinnedPlacement) return null;
+  for (const rect of normalizeCastleLayoutReservedRects(reservedRect)) {
+    if (!canPlaceCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height)) return null;
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  }
+
+  for (const item of items) {
+    if (pinnedKeys.has(item.layoutKey)) continue;
+    const position = findCastleLayoutPlacement(grid, cols, rows, item.width, item.height, strategy);
+    if (!position) return null;
+    markCastleLayoutRect(grid, position.x, position.y, item.width, item.height, true);
+    packed.push({ ...item, x: position.x, y: position.y });
+  }
+
+  if (hasCastleLayoutOverlaps(packed)) return null;
+  return packed.sort((a, b) => a.sourceIndex - b.sourceIndex);
+}
+
+function normalizeCastleLayoutReservedRects(value) {
+  if (!value) return [];
+  const values = Array.isArray(value) ? value : [value];
+  return values.map((rect) => ({
+    x: Math.max(0, Math.trunc(Number(rect?.x) || 0)),
+    y: Math.max(0, Math.trunc(Number(rect?.y) || 0)),
+    width: Math.max(1, Math.trunc(Number(rect?.width) || 1)),
+    height: Math.max(1, Math.trunc(Number(rect?.height) || 1)),
+  }));
+}
+
+function findCastleLayoutPlacement(grid, cols, rows, width, height, strategy = {}) {
+  const maxX = cols - width;
+  const maxY = rows - height;
+  if (maxX < 0 || maxY < 0) return null;
+  const xStart = strategy.xDirection === "desc" ? maxX : 0;
+  const xEnd = strategy.xDirection === "desc" ? 0 : maxX;
+  const xStep = strategy.xDirection === "desc" ? -1 : 1;
+  const yStart = strategy.yDirection === "desc" ? maxY : 0;
+  const yEnd = strategy.yDirection === "desc" ? 0 : maxY;
+  const yStep = strategy.yDirection === "desc" ? -1 : 1;
+
+  if (strategy.primary === "anchor" && strategy.anchorRect) {
+    let best = null;
+    for (let y = yStart; yStep > 0 ? y <= yEnd : y >= yEnd; y += yStep) {
+      for (let x = xStart; xStep > 0 ? x <= xEnd : x >= xEnd; x += xStep) {
+        if (!canPlaceCastleLayoutRect(grid, x, y, width, height)) continue;
+        const score = getCastleLayoutPlacementAnchorScore({ x, y, width, height }, strategy.anchorRect);
+        if (!best || isBetterCastleLayoutPlacement(score, best.score)) {
+          best = { x, y, score };
+        }
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
+  if (strategy.primary === "score") {
+    let best = null;
+    for (let y = 0; y <= maxY; y += 1) {
+      for (let x = 0; x <= maxX; x += 1) {
+        if (!canPlaceCastleLayoutRect(grid, x, y, width, height)) continue;
+        const score = getCastleLayoutPlacementStrategyScore({ x, y, width, height }, cols, rows, strategy.scoreMode);
+        if (!best || score < best.score) best = { x, y, score };
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }
+
+  if (strategy.primary === "column") {
+    for (let x = xStart; xStep > 0 ? x <= xEnd : x >= xEnd; x += xStep) {
+      for (let y = yStart; yStep > 0 ? y <= yEnd : y >= yEnd; y += yStep) {
+        if (canPlaceCastleLayoutRect(grid, x, y, width, height)) return { x, y };
+      }
+    }
+    return null;
+  }
+
+  for (let y = yStart; yStep > 0 ? y <= yEnd : y >= yEnd; y += yStep) {
+    for (let x = xStart; xStep > 0 ? x <= xEnd : x >= xEnd; x += xStep) {
+      if (canPlaceCastleLayoutRect(grid, x, y, width, height)) return { x, y };
+    }
+  }
+  return null;
+}
+
+function getCastleLayoutPlacementStrategyScore(rect, cols, rows, mode = "center") {
+  const rectCenterX = rect.x + rect.width / 2;
+  const rectCenterY = rect.y + rect.height / 2;
+  const centerDistance = Math.abs(rectCenterX - cols / 2) + Math.abs(rectCenterY - rows / 2);
+  const edgeDistance = Math.min(rect.x, rect.y, cols - (rect.x + rect.width), rows - (rect.y + rect.height));
+  if (mode === "edge") return edgeDistance * 10000 + centerDistance;
+  if (mode === "top-edge") return rect.y * 10000 + Math.abs(rectCenterX - cols / 2) * 100 + rect.x;
+  if (mode === "left-edge") return rect.x * 10000 + Math.abs(rectCenterY - rows / 2) * 100 + rect.y;
+  return centerDistance * 10000 + edgeDistance;
+}
+
+function getCastleLayoutAnchorRect(items) {
+  const minX = Math.min(...items.map((item) => item.x));
+  const minY = Math.min(...items.map((item) => item.y));
+  const maxX = Math.max(...items.map((item) => item.x + item.width));
+  const maxY = Math.max(...items.map((item) => item.y + item.height));
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(1, maxX - minX),
+    height: Math.max(1, maxY - minY),
+  };
+}
+
+function getCastleLayoutPlacementAnchorScore(rect, anchorRect) {
+  const xGap = Math.max(0, Math.max(anchorRect.x - (rect.x + rect.width), rect.x - (anchorRect.x + anchorRect.width)));
+  const yGap = Math.max(0, Math.max(anchorRect.y - (rect.y + rect.height), rect.y - (anchorRect.y + anchorRect.height)));
+  const rectCenterX = rect.x + rect.width / 2;
+  const rectCenterY = rect.y + rect.height / 2;
+  const anchorCenterX = anchorRect.x + anchorRect.width / 2;
+  const anchorCenterY = anchorRect.y + anchorRect.height / 2;
+  return {
+    gap: xGap + yGap,
+    centerDistance: Math.abs(rectCenterX - anchorCenterX) + Math.abs(rectCenterY - anchorCenterY),
+    areaDistance: Math.abs((rect.width * rect.height) - (anchorRect.width * anchorRect.height)),
+  };
+}
+
+function isBetterCastleLayoutPlacement(score, currentBest) {
+  if (!currentBest) return true;
+  if (score.gap !== currentBest.gap) return score.gap < currentBest.gap;
+  if (score.centerDistance !== currentBest.centerDistance) return score.centerDistance < currentBest.centerDistance;
+  return score.areaDistance < currentBest.areaDistance;
+}
+
+function createCastleLayoutGrid(cols, rows) {
+  return Array.from({ length: rows }, () => Array(cols).fill(false));
+}
+
+function canPlaceCastleLayoutRect(grid, x, y, width, height) {
+  if (x < 0 || y < 0 || width < 1 || height < 1) return false;
+  if (y + height > grid.length || x + width > (grid[0]?.length || 0)) return false;
+  for (let row = y; row < y + height; row += 1) {
+    for (let col = x; col < x + width; col += 1) {
+      if (grid[row]?.[col]) return false;
+    }
+  }
+  return true;
+}
+
+function markCastleLayoutRect(grid, x, y, width, height, occupied) {
+  for (let row = y; row < y + height; row += 1) {
+    for (let col = x; col < x + width; col += 1) {
+      if (grid[row]) grid[row][col] = occupied;
+    }
+  }
+}
+
+function doCastleLayoutRectsOverlap(a, b) {
+  return a.x < b.x + b.width
+    && a.x + a.width > b.x
+    && a.y < b.y + b.height
+    && a.y + a.height > b.y;
+}
+
+function hasCastleLayoutOverlaps(items) {
+  for (let index = 0; index < items.length; index += 1) {
+    for (let nextIndex = index + 1; nextIndex < items.length; nextIndex += 1) {
+      if (doCastleLayoutRectsOverlap(items[index], items[nextIndex])) return true;
+    }
+  }
+  return false;
+}
+
+function scoreCastleLayoutPlan(items, cols, rows, goals, pinnedItems = [], blockedRects = []) {
+  const normalizedGoals = normalizeCastleLayoutGoals(goals, cols, rows);
+  const normalizedBlockedRects = normalizeCastleLayoutBlockedRects(blockedRects, cols, rows);
+  const grid = buildCastleLayoutOccupancy(items, cols, rows, normalizedBlockedRects);
+  const evaluation = evaluateCastleLayoutGoals(grid, cols, rows, normalizedGoals);
+  const scoreVector = [...evaluation.scoreVector];
+  const anchorScore = getCastleLayoutPlanAnchorScore(items, pinnedItems);
+  if (anchorScore !== null) scoreVector.push(anchorScore);
+  return {
+    items,
+    bounds: { minX: 0, minY: 0, cols, rows },
+    goalSpaces: evaluation.rects.length,
+    goalRects: evaluation.rects,
+    goalResults: evaluation.results,
+    largestEmpty: evaluation.closest,
+    placedCount: items.length,
+    totalCount: items.length,
+    blockedRects: normalizedBlockedRects,
+    blockedCount: normalizedBlockedRects.length,
+    score: scoreVector.reduce((sum, value, index) => sum + value / Math.pow(1000, index), 0),
+    scoreVector,
+  };
+}
+
+function getCastleLayoutPlanAnchorScore(items, pinnedItems = []) {
+  if (!Array.isArray(pinnedItems) || pinnedItems.length === 0) return null;
+  const pinnedKeys = new Set(pinnedItems.map((item) => item.layoutKey));
+  const movableItems = items.filter((item) => !pinnedKeys.has(item.layoutKey));
+  if (movableItems.length === 0) return 0;
+  const anchorRect = getCastleLayoutAnchorRect(pinnedItems);
+  const totalGap = movableItems.reduce((sum, item) => {
+    const score = getCastleLayoutPlacementAnchorScore(item, anchorRect);
+    return sum + score.gap + score.centerDistance / 100;
+  }, 0);
+  return -Math.round((totalGap / movableItems.length) * 100);
+}
+
+function isBetterCastleLayoutPlan(plan, currentBest) {
+  if (!currentBest) return true;
+  const next = Array.isArray(plan?.scoreVector) ? plan.scoreVector : [Number(plan?.score || 0)];
+  const best = Array.isArray(currentBest?.scoreVector) ? currentBest.scoreVector : [Number(currentBest?.score || 0)];
+  const length = Math.max(next.length, best.length);
+  for (let index = 0; index < length; index += 1) {
+    const diff = (next[index] || 0) - (best[index] || 0);
+    if (diff !== 0) return diff > 0;
+  }
+  return Number(plan?.score || 0) > Number(currentBest?.score || 0);
+}
+
+function evaluateCastleLayoutGoals(grid, cols, rows, goals) {
+  const normalizedGoals = normalizeCastleLayoutGoals(goals, cols, rows);
+  const workingGrid = cloneCastleLayoutGrid(grid);
+  const rects = [];
+  const results = [];
+  const scoreVector = [];
+  let closest = null;
+
+  normalizedGoals.forEach((goal, index) => {
+    const maxRects = goal.countMode === "max" ? Number.POSITIVE_INFINITY : goal.count;
+    const openSpaces = getCastleLayoutGoalOpenSpaces(workingGrid, cols, rows, goal.width, goal.height, maxRects);
+    const goalRects = openSpaces.rects.map((rect) => ({
+      ...rect,
+      priority: index + 1,
+    }));
+    goalRects.forEach((rect) => {
+      markCastleLayoutRect(workingGrid, rect.x, rect.y, rect.width, rect.height, true);
+    });
+
+    const found = goalRects.length;
+    const met = goal.countMode === "max" || found >= goal.count;
+    const nextClosest = findBestCastleLayoutOpenArea(workingGrid, cols, rows, goal);
+    if (!closest || (!met && closest.isMet)) closest = { ...nextClosest, isMet: met };
+
+    scoreVector.push(goal.countMode === "max" ? found : Math.min(found, goal.count));
+    if (met) {
+      scoreVector.push(0, 0, 0, 0);
+    } else {
+      scoreVector.push(
+        nextClosest.goalFit,
+        Math.round(nextClosest.dimensionFit * 1000),
+        -nextClosest.shortfall,
+        nextClosest.area,
+      );
+    }
+
+    rects.push(...goalRects);
+    results.push({
+      priority: index + 1,
+      width: goal.width,
+      height: goal.height,
+      count: goal.count,
+      countMode: goal.countMode,
+      found,
+      possibleCount: openSpaces.possibleCount,
+      met,
+      closest: nextClosest,
+    });
+  });
+
+  return {
+    rects,
+    results,
+    closest: closest || findBestCastleLayoutOpenArea(workingGrid, cols, rows, normalizedGoals[0]),
+    scoreVector,
+  };
+}
+
+function buildCastleLayoutOccupancy(items, cols, rows, blockedRects = []) {
+  const grid = createCastleLayoutGrid(cols, rows);
+  normalizeCastleLayoutBlockedRects(blockedRects, cols, rows).forEach((rect) => {
+    markCastleLayoutRect(grid, rect.x, rect.y, rect.width, rect.height, true);
+  });
+  items.forEach((item) => {
+    markCastleLayoutRect(grid, Math.max(0, Math.trunc(item.x)), Math.max(0, Math.trunc(item.y)), item.width, item.height, true);
+  });
+  return grid;
+}
+
+function cloneCastleLayoutGrid(grid) {
+  return grid.map((row) => [...row]);
+}
+
+function getCastleLayoutGoalOpenSpaces(grid, cols, rows, width, height, maxRects = 16) {
+  if (width > cols || height > rows) return { count: 0, rects: [] };
+  const candidates = [];
+  for (let y = 0; y <= rows - height; y += 1) {
+    for (let x = 0; x <= cols - width; x += 1) {
+      if (canPlaceCastleLayoutRect(grid, x, y, width, height)) {
+        candidates.push({ x, y, width, height });
+      }
+    }
+  }
+  const possibleCount = candidates.length;
+  const limit = Number.isFinite(maxRects)
+    ? Math.max(0, Math.trunc(Number(maxRects) || 0))
+    : Number.POSITIVE_INFINITY;
+  if (possibleCount === 0 || limit === 0) return { count: 0, possibleCount, rects: [] };
+
+  let bestRects = [];
+  const consider = (rects) => {
+    if (rects.length > bestRects.length) bestRects = rects;
+  };
+
+  const phaseBuckets = new Map();
+  candidates.forEach((candidate) => {
+    const key = `${candidate.x % width}|${candidate.y % height}`;
+    if (!phaseBuckets.has(key)) phaseBuckets.set(key, []);
+    phaseBuckets.get(key).push(candidate);
+  });
+  phaseBuckets.forEach((rects) => {
+    consider(rects.slice(0, limit));
+  });
+
+  const centerX = cols / 2;
+  const centerY = rows / 2;
+  const orderers = [
+    (a, b) => a.y - b.y || a.x - b.x,
+    (a, b) => b.y - a.y || b.x - a.x,
+    (a, b) => a.x - b.x || a.y - b.y,
+    (a, b) => b.x - a.x || b.y - a.y,
+    (a, b) => (Math.abs(a.x - centerX) + Math.abs(a.y - centerY)) - (Math.abs(b.x - centerX) + Math.abs(b.y - centerY)),
+    (a, b) => (Math.abs(b.x - centerX) + Math.abs(b.y - centerY)) - (Math.abs(a.x - centerX) + Math.abs(a.y - centerY)),
+  ];
+
+  const greedyOrderers = possibleCount > 1600 && !Number.isFinite(limit)
+    ? orderers.slice(0, 2)
+    : orderers;
+  greedyOrderers.forEach((orderer) => {
+    if (bestRects.length >= limit) return;
+    consider(selectCastleLayoutOpenSpacesGreedy(grid, candidates, orderer, limit));
+  });
+
+  return { count: bestRects.length, possibleCount, rects: bestRects };
+}
+
+function selectCastleLayoutOpenSpacesGreedy(grid, candidates, orderer, limit) {
+  const selectionGrid = cloneCastleLayoutGrid(grid);
+  const rects = [];
+  const orderedCandidates = [...candidates].sort(orderer);
+  for (const candidate of orderedCandidates) {
+    if (rects.length >= limit) break;
+    if (!canPlaceCastleLayoutRect(selectionGrid, candidate.x, candidate.y, candidate.width, candidate.height)) continue;
+    rects.push(candidate);
+    markCastleLayoutRect(selectionGrid, candidate.x, candidate.y, candidate.width, candidate.height, true);
+  }
+  return rects;
+}
+
+function countCastleLayoutOpenSpaces(grid, cols, rows, width, height) {
+  return getCastleLayoutGoalOpenSpaces(grid, cols, rows, width, height, 0).possibleCount;
+}
+
+function findLargestEmptyRectangle(grid, cols, rows) {
+  const heights = Array(cols).fill(0);
+  let best = { x: 0, y: 0, width: 0, height: 0, area: 0 };
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      heights[col] = grid[row][col] ? 0 : heights[col] + 1;
+    }
+    const stack = [];
+    for (let col = 0; col <= cols; col += 1) {
+      const currentHeight = col === cols ? 0 : heights[col];
+      while (stack.length > 0 && currentHeight < heights[stack[stack.length - 1]]) {
+        const height = heights[stack.pop()];
+        const left = stack.length === 0 ? 0 : stack[stack.length - 1] + 1;
+        const width = col - left;
+        const area = width * height;
+        if (area > best.area) {
+          best = {
+            x: left,
+            y: row - height + 1,
+            width,
+            height,
+            area,
+          };
+        }
+      }
+      stack.push(col);
+    }
+  }
+
+  return best;
+}
+
+function findBestCastleLayoutOpenArea(grid, cols, rows, goal) {
+  const heights = Array(cols).fill(0);
+  let best = { x: 0, y: 0, width: 0, height: 0, area: 0, goalFit: 0, dimensionFit: 0, shortfall: 0 };
+
+  for (let row = 0; row < rows; row += 1) {
+    for (let col = 0; col < cols; col += 1) {
+      heights[col] = grid[row][col] ? 0 : heights[col] + 1;
+    }
+    const stack = [];
+    for (let col = 0; col <= cols; col += 1) {
+      const currentHeight = col === cols ? 0 : heights[col];
+      while (stack.length > 0 && currentHeight < heights[stack[stack.length - 1]]) {
+        const height = heights[stack.pop()];
+        const left = stack.length === 0 ? 0 : stack[stack.length - 1] + 1;
+        const width = col - left;
+        const area = width * height;
+        const metrics = getCastleLayoutOpenAreaMetrics(width, height, goal);
+        if (
+          metrics.goalFit > best.goalFit
+          || (metrics.goalFit === best.goalFit && metrics.dimensionFit > best.dimensionFit)
+          || (metrics.goalFit === best.goalFit && metrics.dimensionFit === best.dimensionFit && metrics.shortfall < best.shortfall)
+          || (metrics.goalFit === best.goalFit && metrics.dimensionFit === best.dimensionFit && metrics.shortfall === best.shortfall && area > best.area)
+        ) {
+          best = {
+            x: left,
+            y: row - height + 1,
+            width,
+            height,
+            area,
+            ...metrics,
+          };
+        }
+      }
+      stack.push(col);
+    }
+  }
+
+  return best;
+}
+
+function getCastleLayoutOpenAreaMetrics(width, height, goal) {
+  const goalWidth = Math.max(1, Math.trunc(Number(goal?.width) || 1));
+  const goalHeight = Math.max(1, Math.trunc(Number(goal?.height) || 1));
+  const fitWidth = Math.min(width, goalWidth);
+  const fitHeight = Math.min(height, goalHeight);
+  return {
+    goalFit: fitWidth * fitHeight,
+    dimensionFit: Math.min(fitWidth / goalWidth, fitHeight / goalHeight),
+    shortfall: Math.max(0, goalWidth - width) + Math.max(0, goalHeight - height),
+  };
+}
+
+function parseCastleLayoutCoordinate(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.trunc(number) : null;
+}
+
+function isUnknownCastleLayoutPosition(x, y) {
+  return x < 0 || y < 0 || (x === 0 && y === 0);
+}
+
+function isRotatedCastleLayoutItem(rotation) {
+  return Math.abs(Math.trunc(Number(rotation) || 0)) % 2 === 1;
+}
+
+function getLayoutDimension(...values) {
+  const value = values.map(Number).find((number) => Number.isFinite(number) && number > 0);
+  return Math.max(1, Math.trunc(value || 1));
+}
+
+function getCastleLayoutAssetScale(width, height) {
+  const minDimension = Math.min(Number(width) || 1, Number(height) || 1);
+  const maxDimension = Math.max(Number(width) || 1, Number(height) || 1);
+  if (minDimension <= 2) return 58;
+  if (minDimension <= 3) return 64;
+  if (minDimension <= 4) return 70;
+  if (minDimension <= 5 && maxDimension > 5) return 66;
+  if (minDimension <= 5) return 74;
+  if (maxDimension >= 14) return 88;
+  if (maxDimension >= 10) return 82;
+  return 78;
+}
+
+function getCastleLayoutBounds(items) {
+  const minX = Math.min(...items.map((item) => item.x));
+  const minY = Math.min(...items.map((item) => item.y));
+  const maxX = Math.max(...items.map((item) => item.x + item.width));
+  const maxY = Math.max(...items.map((item) => item.y + item.height));
+  return {
+    minX,
+    minY,
+    cols: Math.max(1, maxX - minX),
+    rows: Math.max(1, maxY - minY),
+  };
+}
+
+function getCastleLayoutTone(group) {
+  const normalized = String(group || "").toLowerCase();
+  if (normalized.includes("tower") || normalized.includes("defence") || normalized.includes("moat") || normalized.includes("gate")) return "defense";
+  if (normalized.includes("fixed")) return "fixed";
+  if (normalized.includes("decor")) return "decor";
+  return "building";
 }
 
 function renderTargetCastleSection(target) {
@@ -3200,25 +6080,37 @@ function renderScoreContributionPill(value, label) {
   return `<span class="score-contribution-pill" title="${escapeHtml(label)}">${escapeHtml(formatScoreContribution(number))} ${escapeHtml(label)}</span>`;
 }
 
-function getCastleBuildingGroups(rows, evaluation) {
+function getCastleBuildingGroups(rows, evaluation, layoutRows = rows) {
   const groups = new Map();
+  const ensureGroup = (row) => {
+    const key = getCastleBuildingKey(row);
+    const group = groups.get(key) || {
+      key,
+      castleName: row.castleName,
+      castleType: row.castleType,
+      castleIconUrl: row.castleIconUrl,
+      kingdomId: row.kingdomId,
+      displayIndex: row.displayIndex,
+      instances: [],
+      layoutRows: [],
+    };
+    groups.set(key, group);
+    return group;
+  };
+
+  layoutRows
+    .filter((row) => !row.missing && row.instances.length > 0)
+    .forEach((row) => {
+      ensureGroup(row).layoutRows.push(row);
+    });
+
   rows
     .filter((row) => !row.missing && row.instances.length > 0)
     .forEach((row) => {
-      const key = getCastleBuildingKey(row);
-      const group = groups.get(key) || {
-        key,
-        castleName: row.castleName,
-        castleType: row.castleType,
-        castleIconUrl: row.castleIconUrl,
-        kingdomId: row.kingdomId,
-        displayIndex: row.displayIndex,
-        instances: [],
-      };
+      const group = ensureGroup(row);
       row.instances.forEach((instance) => {
         group.instances.push({ row, instance });
       });
-      groups.set(key, group);
     });
 
   if (evaluation) {
@@ -3231,6 +6123,7 @@ function getCastleBuildingGroups(rows, evaluation) {
         kingdomId: castleTarget.kingdomId,
         displayIndex: castleTarget.displayIndex,
         instances: [],
+        layoutRows: [],
       };
       group.target = castleTarget;
       groups.set(castleTarget.key, group);
@@ -3266,6 +6159,10 @@ function getBuildingRowsForPlayer(playerKey) {
   const rows = state.buildingScanRows.filter((row) => row.playerKey === String(playerKey || ""));
   if (state.selectedBuildingKeys.size === 0) return rows;
   return rows.filter((row) => row.missing || state.selectedBuildingKeys.has(row.buildingKey));
+}
+
+function getCachedBuildingRowsForPlayer(playerKey) {
+  return state.buildingScanRows.filter((row) => row.playerKey === String(playerKey || ""));
 }
 
 function hasCachedBuildingRowsForPlayer(playerKey) {
@@ -3971,6 +6868,48 @@ function storePlayerBuildingRows(playerKey, rows) {
     ...state.buildingScanRows.filter((row) => row.playerKey !== playerKey),
     ...rows,
   ].sort(sortBuildingRows);
+  state.castleLayoutPlans = new Map(
+    [...state.castleLayoutPlans].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGoals = new Map(
+    [...state.castleLayoutGoals].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutExcludedKeys = new Map(
+    [...state.castleLayoutExcludedKeys].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutPinnedItems = new Map(
+    [...state.castleLayoutPinnedItems].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutBlockedRects = new Map(
+    [...state.castleLayoutBlockedRects].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutBlockModeKeys = new Set(
+    [...state.castleLayoutBlockModeKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutOptimizeModes = new Map(
+    [...state.castleLayoutOptimizeModes].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGeneratingKeys = new Set(
+    [...state.castleLayoutGeneratingKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGenerateProgress = new Map(
+    [...state.castleLayoutGenerateProgress].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGenerateCancelTokens.forEach((token, key) => {
+    if (key.startsWith(`${playerKey}|`)) token.cancelled = true;
+  });
+  state.castleLayoutGenerateCancelTokens = new Map(
+    [...state.castleLayoutGenerateCancelTokens].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.openBuildingCastleKeys = new Set(
+    [...state.openBuildingCastleKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.activeCastleDetailTabs = new Map(
+    [...state.activeCastleDetailTabs].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.activeCastleLayoutModes = new Map(
+    [...state.activeCastleLayoutModes].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
 
   const watchtowerResult = state.watchtowerResults.get(playerKey);
   if (watchtowerResult) {
@@ -3981,8 +6920,35 @@ function storePlayerBuildingRows(playerKey, rows) {
 }
 
 function openPlayerDetails(playerKey, mode = "building") {
-  state.collapsedBuildingCastleKeys = new Set(
-    [...state.collapsedBuildingCastleKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  state.openBuildingCastleKeys = new Set(
+    [...state.openBuildingCastleKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.activeCastleDetailTabs = new Map(
+    [...state.activeCastleDetailTabs].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.activeCastleLayoutModes = new Map(
+    [...state.activeCastleLayoutModes].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutPinnedItems = new Map(
+    [...state.castleLayoutPinnedItems].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutBlockedRects = new Map(
+    [...state.castleLayoutBlockedRects].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutBlockModeKeys = new Set(
+    [...state.castleLayoutBlockModeKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGeneratingKeys = new Set(
+    [...state.castleLayoutGeneratingKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGenerateProgress = new Map(
+    [...state.castleLayoutGenerateProgress].filter(([key]) => !key.startsWith(`${playerKey}|`)),
+  );
+  state.castleLayoutGenerateCancelTokens.forEach((token, key) => {
+    if (key.startsWith(`${playerKey}|`)) token.cancelled = true;
+  });
+  state.castleLayoutGenerateCancelTokens = new Map(
+    [...state.castleLayoutGenerateCancelTokens].filter(([key]) => !key.startsWith(`${playerKey}|`)),
   );
   state.openTargetCastleKeys = new Set(
     [...state.openTargetCastleKeys].filter((key) => !key.startsWith(`${playerKey}|`)),
@@ -4179,6 +7145,9 @@ function mapBuildingRows(player, castle, castleData, selectedFilters = [], displ
         level: Number(entry.item.level || 0),
         positionX: entry.raw.positionX,
         positionY: entry.raw.positionY,
+        width: Number(entry.item.width || 1),
+        height: Number(entry.item.height || 1),
+        rotation: Number(entry.raw.rotation || 0),
         hitPoints: Number(entry.raw.hitPoints || 0),
         efficiency: Number(entry.raw.efficiency || 0),
         buildingState: Number(entry.raw.buildingState || 0),
@@ -4729,6 +7698,9 @@ function mapDefensiveConstructionItemRows(player, castle, structures) {
           level: Number(structure.level || 0),
           positionX: structure.raw.positionX,
           positionY: structure.raw.positionY,
+          width: Number(structure.item?.width || 1),
+          height: Number(structure.item?.height || 1),
+          rotation: Number(structure.raw.rotation || 0),
           hitPoints: Number(structure.raw.hitPoints || 0),
           efficiency: Number(structure.raw.efficiency || 0),
           buildingState: Number(structure.raw.buildingState || 0),
@@ -5480,6 +8452,9 @@ function normalizeBuildingScanInstance(instance) {
     level: Number(instance.level || 0),
     positionX: instance.positionX,
     positionY: instance.positionY,
+    width: Number(instance.width || 0),
+    height: Number(instance.height || 0),
+    rotation: Number(instance.rotation || 0),
     hitPoints: Number(instance.hitPoints || 0),
     efficiency: Number(instance.efficiency || 0),
     buildingState: Number(instance.buildingState || 0),
@@ -8007,6 +10982,16 @@ function clampNumber(value, min, max) {
   const number = Number(value);
   if (!Number.isFinite(number)) return min;
   return Math.min(max, Math.max(min, number));
+}
+
+function waitForCastleLayoutFrame() {
+  return new Promise((resolve) => {
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => resolve());
+      return;
+    }
+    setTimeout(resolve, 0);
+  });
 }
 
 function setLoading(isLoading) {
