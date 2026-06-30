@@ -32,7 +32,11 @@ jobs:
 
           cp -R site _site/site
           mkdir -p _site/gge-tracker/gge-tracker-frontend/src
-          cp -R gge-tracker/gge-tracker-frontend/src/assets _site/gge-tracker/gge-tracker-frontend/src/assets
+          if [ -d gge-tracker/gge-tracker-frontend/src/assets ]; then
+            cp -R gge-tracker/gge-tracker-frontend/src/assets _site/gge-tracker/gge-tracker-frontend/src/assets
+          else
+            cp -R asset-review/gge-assets _site/gge-tracker/gge-tracker-frontend/src/assets
+          fi
 
           touch _site/.nojekyll
           cat > _site/index.html <<'HTML'
